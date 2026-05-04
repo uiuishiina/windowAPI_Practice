@@ -139,6 +139,19 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\main\main.cpp" />
+    <ClCompile Include="..\Manager\windowManager.cpp" />
+    <ClCompile Include="..\Manager\windowregister.cpp" />
+    <ClCompile Include="..\windowBase\windowBase.cpp" />
+    <ClCompile Include="..\windowBase\windowMain.cpp" />
+    <ClCompile Include="..\windowBase\windowSub.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Manager\windowManager.h" />
+    <ClInclude Include="..\Manager\windowregister.h" />
+    <ClInclude Include="..\windowBase\windowBase.h" />
+    <ClInclude Include="..\windowBase\windowMain.h" />
+    <ClInclude Include="..\windowBase\windowSub.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -13,5 +13,51 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="windowBase">
+      <UniqueIdentifier>{11fb1a3f-d8f7-4061-9290-36aaae9bb57a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="main">
+      <UniqueIdentifier>{ecb6bcf8-9cea-47b5-ba0b-e2dd1b46f244}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Manager">
+      <UniqueIdentifier>{64a73043-e87e-4cf9-9cde-7d5a035ba0be}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\main\main.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\windowBase\windowBase.cpp">
+      <Filter>windowBase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Manager\windowManager.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Manager\windowregister.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\windowBase\windowMain.cpp">
+      <Filter>windowBase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\windowBase\windowSub.cpp">
+      <Filter>windowBase</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\windowBase\windowBase.h">
+      <Filter>windowBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Manager\windowManager.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Manager\windowregister.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\windowBase\windowMain.h">
+      <Filter>windowBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\windowBase\windowSub.h">
+      <Filter>windowBase</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
