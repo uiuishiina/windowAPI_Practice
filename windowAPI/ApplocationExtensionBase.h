@@ -7,16 +7,14 @@ class ApplicationExtensionBase
 {
 public:
 
-	ApplicationExtensionBase(HWND hWnd) :
-		hWnd_{ hWnd } {}
+	ApplicationExtensionBase(HWND hWnd, HINSTANCE hInstance) :
+		hWnd_{ hWnd }, hInstance_{ hInstance } {}
 
 	virtual ~ApplicationExtensionBase() = default;
 
-	virtual LRESULT ExtensionProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) { 
-		return DefWindowProc(hWnd, message, wParam, lParam); 
-	};
+	virtual void ExtensionProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {};
 
-	void ShowMessage(LPCUWSTR mainText, LPCUWSTR titleText) const {
+	void ShowMessage(LPCWSTR mainText, LPCWSTR titleText) const {
 		MessageBoxW(
 			nullptr,
 			mainText,
@@ -25,7 +23,16 @@ public:
 		);
 	}
 
-	bool YesNoMessage(LPCUWSTR mainText, LPCUWSTR titleText) const {
+	void ShowMessage(LPCSTR mainText, LPCSTR titleText) const {
+		MessageBoxA(
+			nullptr,
+			mainText,
+			titleText,
+			MB_OK
+		);
+	}
+
+	bool YesNoMessage(LPCWSTR mainText, LPCWSTR titleText) const {
 		int result = MessageBoxW(
 			hWnd_,
 			mainText,
@@ -39,5 +46,6 @@ public:
 protected:
 
 	HWND hWnd_{};
+	HINSTANCE hInstance_{};
 
 };
