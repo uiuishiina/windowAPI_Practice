@@ -48,7 +48,6 @@ void Application::Keybord(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         switch (wParam)
         {
-        
         default:
             break;
         }
@@ -56,7 +55,7 @@ void Application::Keybord(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 }
 
-bool Application::SelectYesNo(LPCUWSTR mainText, LPCUWSTR titleText) {
+bool Application::SelectYesNo(LPCWSTR mainText, LPCWSTR titleText) {
 
     int result = MessageBoxW(
         nullptr,

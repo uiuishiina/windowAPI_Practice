@@ -2,6 +2,13 @@
 
 #include"framework.h"
 #include "windowAPI.h"
+#include<objbase.h>
+
+#include<vector>
+#include<concepts>
+#include<memory>
+#include"ApplocationExtensionBase.h"
+#include"VideoPlaybackExtension.h"
 
 #define MAX_LOADSTRING 100
 
@@ -10,7 +17,17 @@ class Application final
 public:
 
     Application(HINSTANCE hInstance) :
-        hInstance_{ hInstance } {}
+        hInstance_{ hInstance } {
+
+        HRESULT hr = CoInitializeEx(
+            nullptr,
+            COINIT_APARTMENTTHREADED
+        );
+
+        if (SUCCEEDED(hr)) {
+            CoUninitialize();
+        }
+    }
 
     ~Application() = default;
 
@@ -44,6 +61,8 @@ private:
 
     WCHAR Title_[MAX_LOADSTRING] = L"WindowAPI";
     WCHAR WindowClass_[MAX_LOADSTRING] = L"WindowAPI";
+
+    std::vector<std::unique_ptr<ApplicationExtensionBase>> ExtensionArray{};
 
     LRESULT static CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 
@@ -80,6 +99,12 @@ private:
     /// <param name="lParam"></param>
     /// <returns></returns>
     LRESULT AppProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+
+        if (!ExtensionArray.empty()) {
+            for (auto& ex : ExtensionArray) {
+                ex->ExtensionProc(hWnd, message, wParam, lParam);
+            }
+        }
         switch (message)
         {
         case WM_COMMAND:
@@ -126,7 +151,7 @@ private:
 
     void Keybord(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-    bool SelectYesNo(LPCUWSTR mainText , LPCUWSTR titleText);
+    bool SelectYesNo(LPCWSTR mainText , LPCWSTR titleText);
 
     void CheckCloseApp(HWND hWnd) {
 
@@ -162,7 +187,7 @@ private:
     {
 
         HWND hWnd = CreateWindowW(WindowClass_, Title_, WS_OVERLAPPEDWINDOW,
-            CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance_, this);
+            CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720, nullptr, nullptr, hInstance_, this);
 
         if (!hWnd) {
             return FALSE;
@@ -173,6 +198,14 @@ private:
 
         ShowWindow(hWnd, nCmdShow);
         UpdateWindow(hWnd);
+
+        ExtensionArray.push_back(
+            std::make_unique<VideoPlaybackExtension::VideoPlaybackExtension>(
+                hWnd, 
+                hInstance_, 
+                VideoPlaybackExtension::videoFlags::mp3
+            )
+        );
         
         return TRUE;
     }
