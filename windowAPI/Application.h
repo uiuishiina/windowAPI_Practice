@@ -9,6 +9,7 @@
 #include<memory>
 #include"ApplocationExtensionBase.h"
 #include"VideoPlaybackExtension.h"
+#include"Extension/SelectFileExtension.h"
 
 #define MAX_LOADSTRING 100
 
@@ -128,7 +129,6 @@ private:
         {
             PAINTSTRUCT ps;
             BeginPaint(hWnd, &ps);
-            // TODO: 描画コードをここに追加してください...
             EndPaint(hWnd, &ps);
         }
         break;
@@ -203,7 +203,16 @@ private:
             std::make_unique<VideoPlaybackExtension::VideoPlaybackExtension>(
                 hWnd, 
                 hInstance_, 
-                VideoPlaybackExtension::videoFlags::mp3
+                VideoPlaybackExtension::VideoFlags::mp3,
+                VideoPlaybackExtension::VideoFlags::mp4
+            )
+        );
+        ExtensionArray.push_back(
+            std::make_unique<SelectFileExtension::SelectFileExtension>(
+                hWnd, 
+                hInstance_, 
+                SelectFileExtension::FileExtensionFlags::exe,
+                SelectFileExtension::FileExtensionFlags::mp3
             )
         );
         

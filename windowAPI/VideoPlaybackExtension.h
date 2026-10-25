@@ -1,23 +1,32 @@
 #pragma once
 
 #include"ApplocationExtensionBase.h"
+#include"Extension/MenuExtension.h"
+#include"Extension/SubWindow.h"
 
 #include<concepts>
 #include<string>
 #include<vector>
+#include<array>
+#include<memory>
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 namespace VideoPlaybackExtension {
 
-    enum class videoFlags {
+    enum class VideoFlags {
         mp3 = 1 << 0,
         wav = 1 << 1,
         mp4 = 1 << 2,
     };
 
     template<typename E>
-    concept VideoFlags = std::same_as<E, videoFlags>;
+    concept IsVideoFlags = std::same_as<E, VideoFlags>;
 
-    template<VideoFlags... flags>
+    template<IsVideoFlags... flags>
     unsigned int CreateVideoFlag(flags... flag) {
         return (0u | ... | static_cast<unsigned int>(flag));
     }
@@ -25,35 +34,92 @@ namespace VideoPlaybackExtension {
     /// <summary>
     /// 動画再生拡張機能
     /// </summary>
-    class VideoPlaybackExtension final : public ApplicationExtensionBase
+    class VideoPlaybackExtension final : public ApplicationExtensionBase, public SubWindow::SubWindow
     {
         WCHAR ErrorLogW[29] = L"VideoPlaybackExtension Error";
         CHAR ErrorLogA[29] = "VideoPlaybackExtension Error";
-        WCHAR ListWindowClass_[16] = L"VideoListWindow";
-
     public:
-        template<VideoFlags... flags>
+        template<IsVideoFlags... flags>
         explicit VideoPlaybackExtension(HWND hWnd, HINSTANCE hInstance,flags... flag) :
-            ApplicationExtensionBase(hWnd, hInstance),
+            ApplicationExtensionBase{ hWnd, hInstance },
+            SubWindow{ L"VideoListWindow" },
             Flag_{ CreateVideoFlag(flag...) } {
+
+
+            srand((unsigned int)time(NULL));
+
+
+            const auto wc = CreateWindowClass();
+            RegisterClassExW(&wc);
+
+            AppMenu_ = std::make_unique<MenuExtension::MenuExtension>(hWnd_, hInstance_);
+
+            auto file = MenuExtension::MenuFactory::CreatePopupMenuToInfo(
+                {
+                    MenuExtension::MenuFactory::MakeMenuItem(
+                    CREATE_VIDEO_PLAYBACK_WINDOW,
+                    L"ウィンドウ表示",
+                    MFS_ENABLED
+                    )
+                }
+            );
+            
+            bool result = MenuExtension::MenuFactory::AddSubMenu(
+                AppMenu_->WindowMenu_,
+                file,
+                L"動画再生機能拡張",
+                GetMenuItemCount(AppMenu_->WindowMenu_)
+            );
+            AppMenu_->AddMenuFunction(CREATE_VIDEO_PLAYBACK_WINDOW, [this](WPARAM wParam, LPARAM lParam) {
+
+                if (SubhWnd_ == nullptr) {
+                    CreateListWindow();
+                    if (SubhWnd_) {
+                        SetForegroundWindow(SubhWnd_); 
+                        if (ListMenu_ && VideoPassContainer_.empty()) {
+                            ListMenu_->CallMenuFunction(VIDEOPLAYBACK_LOADFOLDERTOPAH, wParam, lParam);
+                        }
+                        ShowConrainer();
+                    }
+                }
+                else {
+                    ShowWindow(SubhWnd_, SW_SHOW);
+                    SetForegroundWindow(SubhWnd_);
+                }
+                });
+            AppMenu_->SetMenuBar(hWnd_, AppMenu_->WindowMenu_);
+        }
+
+        /// <summary>
+        /// ウィンドウクラス作成関数
+        /// </summary>
+        /// <returns>作成したウィンドウクラス</returns>
+        const WNDCLASSEXW CreateWindowClass() const noexcept override {
 
             WNDCLASSEXW wc{};
             wc.cbSize = sizeof(wc);
-            wc.lpfnWndProc = VideoWindowProc;
+            wc.lpfnWndProc = WndProc;
             wc.hInstance = hInstance_;
             wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
             wc.hbrBackground = reinterpret_cast<HBRUSH>(
                 COLOR_WINDOW + 1
                 );
-            wc.lpszClassName = ListWindowClass_;
+            wc.lpszClassName = ClassName_.c_str();
 
-            RegisterClassExW(&wc);
+            return wc;
         }
-
 
         void ExtensionProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) override;
         
-        LRESULT VideoListProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+        /// <summary>
+        /// サブウィンドウプロシージャ関数
+        /// </summary>
+        /// <param name="hWnd">ウィンドウハンドル</param>
+        /// <param name="message">メッセージ</param>
+        /// <param name="wParam">パラメーター</param>
+        /// <param name="lParam">パラメーター</param>
+        /// <returns>メッセージの返値</returns>
+        LRESULT SubWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) override;
 
         std::wstring SelectPath() const;
 
@@ -65,85 +131,112 @@ namespace VideoPlaybackExtension {
 
         void ShowConrainer();
 
-        bool CreateListWindow();
+        bool CreateListWindow() {
+
+            if (!CreateSubWindow(hInstance_, 500, 700)) {
+                return false;
+            }
+
+            ListMenu_ = std::make_unique<MenuExtension::MenuExtension>(SubhWnd_, hInstance_);
+
+            auto load = MenuExtension::MenuFactory::CreatePopupMenuToInfo(
+                {
+                    MenuExtension::MenuFactory::MakeMenuItem(
+                    VIDEOPLAYBACK_LOADFOLDERTOPAH,
+                    L"ファイルLoad",
+                    MFS_ENABLED
+                    ),
+                    MenuExtension::MenuFactory::MakeMenuItem(
+                   VIDEOPLAYBACK_RANDOM_SECELT,
+                    L"ランダム選択",
+                    MFS_ENABLED),
+                    MenuExtension::MenuFactory::MakeMenuItem(
+                    VIDEOPLAYBACK_CLEAR_LIST,
+                    L"Clear",
+                    MFS_ENABLED
+                    )
+                }
+            );
+
+            bool result = MenuExtension::MenuFactory::AddSubMenu(
+                ListMenu_->WindowMenu_,
+                load,
+                L"File",
+                0
+            );
+
+            ListMenu_->AddMenuFunction(VIDEOPLAYBACK_LOADFOLDERTOPAH, [this](WPARAM wParam, LPARAM lParam) {
+
+                if (auto path = SelectPath(); !path.empty()) {
+                    LoadFolderToPath(path);
+                    ShowConrainer();
+                }
+                });
+            ListMenu_->AddMenuFunction(VIDEOPLAYBACK_RANDOM_SECELT, [this](WPARAM wParam, LPARAM lParam) {
+
+                auto index = 0 + rand() % (VideoPassContainer_.size());
+
+                SendMessage(ListBox_, LB_SETCURSEL, index, 0);
+
+                if (index != LB_ERR) {
+                    // 選択された index を利用する
+                    const std::wstring& selected = VideoPassContainer_[index];
+                    OpenFile(selected);
+                }
+
+                });
+            ListMenu_->AddMenuFunction(VIDEOPLAYBACK_CLEAR_LIST, [this](WPARAM wParam, LPARAM lParam) {
+
+                ClearContainer();
+                });
+            ListMenu_->AddMenuFunction(VIDEOPLAYBACK_DOUBLE_CLICK_LIST, [this](WPARAM wParam, LPARAM lParam) {
+
+                if (HIWORD(wParam) == LBN_SELCHANGE) {
+                    int index = static_cast<int>(
+                        SendMessageW(
+                            reinterpret_cast<HWND>(lParam),
+                            LB_GETCURSEL,
+                            0,
+                            0
+                        ));
+                }
+                else if (HIWORD(wParam) == LBN_DBLCLK) {
+                    int index = static_cast<int>(
+                        SendMessageW(
+                            reinterpret_cast<HWND>(lParam),
+                            LB_GETCURSEL,
+                            0,
+                            0
+                        ));
+                    if (index != LB_ERR) {
+                        // 選択された index を利用する
+                        const std::wstring& selected = VideoPassContainer_[index];
+                        OpenFile(selected);
+                    }
+                }
+                });
+            ListMenu_->SetMenuBar(SubhWnd_, ListMenu_->WindowMenu_);
+
+            return true;
+        }
 
     private:
 
         unsigned int Flag_{};
 
-        HWND ListWindow_{};
         HWND ListBox_{};
+
+        std::unique_ptr<MenuExtension::MenuExtension> AppMenu_{};
+
+        std::unique_ptr<MenuExtension::MenuExtension> ListMenu_{};
 
         std::vector<std::wstring> VideoPassContainer_{};
 
-        LRESULT static CALLBACK VideoWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+        static const UINT CREATE_VIDEO_PLAYBACK_WINDOW = 32770;
+        static const UINT VIDEOPLAYBACK_LOADFOLDERTOPAH = 32771;
+        static const UINT VIDEOPLAYBACK_CLEAR_LIST = 32772;
+        static const UINT VIDEOPLAYBACK_DOUBLE_CLICK_LIST = 32773;
+        static const UINT VIDEOPLAYBACK_RANDOM_SECELT = 32774;
 
-            /* ===== 初期化時 ===== */
-            if (message == WM_NCCREATE) {
-
-                auto cs = reinterpret_cast<CREATESTRUCT*>(lParam);
-                auto pWnd = reinterpret_cast<VideoPlaybackExtension*>(cs->lpCreateParams);
-
-                SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWnd));
-
-                return TRUE;
-            }
-
-            if (auto pWnd = reinterpret_cast<VideoPlaybackExtension*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)); pWnd) {
-
-                /* ===== 最終破棄時 ===== */
-                if (message == WM_NCDESTROY) {
-                    SetWindowLongPtr(hWnd, GWLP_USERDATA, 0);
-                }
-                return pWnd->VideoListProc(hWnd, message, wParam, lParam);
-            }
-
-            return DefWindowProc(hWnd, message, wParam, lParam);
-        }
     };
-
-    inline bool VideoPlaybackExtension::CreateListWindow() {
-        ListWindow_ = CreateWindowExW(
-            0,
-            ListWindowClass_,
-            ListWindowClass_,
-            WS_OVERLAPPEDWINDOW ,
-            CW_USEDEFAULT, CW_USEDEFAULT, 500, 700,
-            nullptr ,
-            nullptr,
-            hInstance_,
-            this
-        );
-        HMENU hMenu = CreateMenu();
-        HMENU hFileMenu = CreatePopupMenu();
-
-        AppendMenuW(
-            hFileMenu,
-            MF_STRING,
-            ID_VIDEOPLAYBACK_LOADFOLDERTOPAH,
-            L"LOADFOLDERTOPAH"
-        );
-        AppendMenuW(
-            hFileMenu,
-            MF_STRING,
-            ID_VIDEOPLAYBACK_CLEAR_LIST,
-            L"ClearList"
-        );
-
-        AppendMenuW(
-            hMenu,
-            MF_POPUP,
-            reinterpret_cast<UINT_PTR>(hFileMenu),
-            L"ファイル"
-        );
-
-        SetMenu(ListWindow_, hMenu);
-        DrawMenuBar(ListWindow_);
-        SetWindowTextW(ListWindow_, ListWindowClass_);
-        ShowWindow(ListWindow_, SW_SHOW);
-        UpdateWindow(ListWindow_);
-        SetForegroundWindow(ListWindow_);
-
-        return true;
-    }
 }

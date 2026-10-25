@@ -12,9 +12,6 @@
 #define IDI_SMALL                       108
 #define IDC_WINDOWAPI                   109
 #define IDR_MAINFRAME                   128
-#define ID_VIDEOPLAYBACK_LOADFOLDERTOPAH 32771
-#define ID_VIDEOPLAYBACK_CLEAR_LIST		32772
-#define ID_VIDEOPLAYBACK_OPEN_WINDOW    32774
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

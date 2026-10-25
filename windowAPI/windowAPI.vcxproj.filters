@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ヘッダー ファイル\Extension">
+      <UniqueIdentifier>{13057670-3dcd-49cc-932b-32b520a9dfc3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -36,6 +39,15 @@
     <ClInclude Include="ApplocationExtensionBase.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="Extension\MenuExtension.h">
+      <Filter>ヘッダー ファイル\Extension</Filter>
+    </ClInclude>
+    <ClInclude Include="Extension\SubWindow.h">
+      <Filter>ヘッダー ファイル\Extension</Filter>
+    </ClInclude>
+    <ClInclude Include="Extension\SelectFileExtension.h">
+      <Filter>ヘッダー ファイル\Extension</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="windowAPI.cpp">
@@ -45,6 +57,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="VideoPlaybackExtension.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Extension\SelectFileExtension.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

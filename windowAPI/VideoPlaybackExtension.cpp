@@ -7,33 +7,12 @@
 #include<wrl/client.h>
 
 void VideoPlaybackExtension::VideoPlaybackExtension::ExtensionProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    switch (message)
-    {
-    case WM_COMMAND:
-    {
-        int wmId = LOWORD(wParam);
-        // 選択されたメニューの解析:
-        switch (wmId)
-        {
-        case ID_VIDEOPLAYBACK_OPEN_WINDOW:
-            if (ListWindow_ == nullptr) {
-                CreateListWindow();
-                if (ListWindow_) {
-                    SetForegroundWindow(ListWindow_);
-                }
-            }
-            else {
-                ShowWindow(ListWindow_, SW_SHOW);
-                SetForegroundWindow(ListWindow_);
-            }
-            break;
-        }
-        break;
-    }
+    if (AppMenu_ != nullptr) {
+        AppMenu_->ExtensionProc(hWnd, message, wParam, lParam);
     }
 }
 
-LRESULT VideoPlaybackExtension::VideoPlaybackExtension::VideoListProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT VideoPlaybackExtension::VideoPlaybackExtension::SubWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message)
     {
     case WM_CREATE: {
@@ -46,7 +25,7 @@ LRESULT VideoPlaybackExtension::VideoPlaybackExtension::VideoListProc(HWND hWnd,
             LBS_NOINTEGRALHEIGHT,
             0, 0, 400, 500,
             hWnd,
-            reinterpret_cast<HMENU>(1001),
+            reinterpret_cast<HMENU>(VIDEOPLAYBACK_DOUBLE_CLICK_LIST),
             GetModuleHandleW(nullptr),
             nullptr
         );
@@ -66,37 +45,8 @@ LRESULT VideoPlaybackExtension::VideoPlaybackExtension::VideoListProc(HWND hWnd,
     }
     case WM_COMMAND:
     {
-        int wmId = LOWORD(wParam);
-        switch (wmId)
-        {
-        case ID_VIDEOPLAYBACK_LOADFOLDERTOPAH:
-            if (auto path = SelectPath(); !path.empty()) {
-                LoadFolderToPath(path);
-                ShowConrainer();
-            }
-            break;
-        case ID_VIDEOPLAYBACK_CLEAR_LIST:
-            ClearContainer();
-            break;
-        }
-        if (
-            wmId == 1001 &&
-            HIWORD(wParam) == LBN_SELCHANGE
-            ) {
-            int index = static_cast<int>(
-                SendMessageW(
-                    reinterpret_cast<HWND>(lParam),
-                    LB_GETCURSEL,
-                    0,
-                    0
-                )
-                );
-
-            if (index != LB_ERR) {
-                // 選択された index を利用する
-                const std::wstring& selected = VideoPassContainer_[index];
-                OpenFile(selected);
-            }
+        if (ListMenu_ != nullptr) {
+            ListMenu_->ExtensionProc(hWnd, message, wParam, lParam);
         }
         return 0;
     }
@@ -105,8 +55,9 @@ LRESULT VideoPlaybackExtension::VideoPlaybackExtension::VideoListProc(HWND hWnd,
         return 0;
 
     case WM_DESTROY:
-        ListWindow_ = nullptr;
+        SubhWnd_ = nullptr;
         ListBox_ = nullptr;
+        ListMenu_ = nullptr;
         return 0;
     }
 
@@ -114,6 +65,35 @@ LRESULT VideoPlaybackExtension::VideoPlaybackExtension::VideoListProc(HWND hWnd,
         hWnd, message, wParam, lParam
     );
 }
+
+
+inline bool JudgeExtension(unsigned int flag, const std::filesystem::path& path) {
+
+    //拡張子取得
+    std::string ext = path.extension().string();
+    for (char& c : ext) {
+        c = std::tolower(c);
+    }
+
+    //判定
+    if (flag & static_cast<unsigned int>(VideoPlaybackExtension::VideoFlags::mp3)) {
+        if (ext == ".mp3") {
+            return true;
+        }
+    }
+    if (flag & static_cast<unsigned int>(VideoPlaybackExtension::VideoFlags::wav)) {
+        if (ext == ".wav") {
+            return true;
+        }
+    }
+    if (flag & static_cast<unsigned int>(VideoPlaybackExtension::VideoFlags::mp4)) {
+        if (ext == ".mp4") {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 std::wstring VideoPlaybackExtension::VideoPlaybackExtension::SelectPath() const {
 
@@ -175,43 +155,15 @@ void VideoPlaybackExtension::VideoPlaybackExtension::LoadFolderToPath(const std:
         return;
     }
 
-
-    ShowMessage(
-        std::wstring{ L"path = [ " + path + L" ]\n" }.c_str(),
-        L"VideoPlayback Load Folder To Path"
-    );
-
     //  パス内走査
     try {
         for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::path(path)))
         {
             auto path_ = entry.path();
+            
             if (entry.is_regular_file()) {
-
-                //拡張子取得
-                std::string ext = entry.path().extension().string();
-                for (char& c : ext) {
-                    c = std::tolower(c);
-                }
-
-                //判定
-                if (Flag_ & static_cast<unsigned int>(videoFlags::mp3)) {
-                    if (ext == ".mp3") {
-                        VideoPassContainer_.push_back(path_.wstring());
-                        continue;
-                    }
-                }
-                if (Flag_ & static_cast<unsigned int>(videoFlags::wav)) {
-                    if (ext == ".wav") {
-                        VideoPassContainer_.push_back(path_.wstring());
-                        continue;
-                    }
-                }
-                if (Flag_ & static_cast<unsigned int>(videoFlags::mp4)) {
-                    if (ext == ".mp4") {
-                        VideoPassContainer_.push_back(path_.wstring());
-                        continue;
-                    }
+                if (JudgeExtension(Flag_, path_)) {
+                    VideoPassContainer_.push_back(path_.wstring());
                 }
             }
         }
@@ -247,6 +199,13 @@ void VideoPlaybackExtension::VideoPlaybackExtension::ClearContainer() {
 }
 
 void VideoPlaybackExtension::VideoPlaybackExtension::ShowConrainer() {
+
+    SendMessageW(
+        ListBox_,
+        LB_RESETCONTENT,
+        0,
+        0
+    );
     for (const auto& name : VideoPassContainer_) {
         SendMessageW(
             ListBox_,
@@ -255,4 +214,5 @@ void VideoPlaybackExtension::VideoPlaybackExtension::ShowConrainer() {
             reinterpret_cast<LPARAM>(name.c_str())
         );
     }
+    SetForegroundWindow(SubhWnd_);
 }
