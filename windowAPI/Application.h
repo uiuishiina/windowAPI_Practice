@@ -8,7 +8,6 @@
 #include<concepts>
 #include<memory>
 #include"ApplocationExtensionBase.h"
-#include"VideoPlaybackExtension.h"
 #include"Extension/SelectFileExtension.h"
 
 #define MAX_LOADSTRING 100
@@ -175,7 +174,7 @@ private:
         wcex.hInstance = hInstance_;
         wcex.hIcon = LoadIcon(hInstance_, MAKEINTRESOURCE(IDI_WINDOWAPI));
         wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 3);
         wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_WINDOWAPI);
         wcex.lpszClassName = WindowClass_;
         wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
@@ -200,18 +199,9 @@ private:
         UpdateWindow(hWnd);
 
         ExtensionArray.push_back(
-            std::make_unique<VideoPlaybackExtension::VideoPlaybackExtension>(
-                hWnd, 
-                hInstance_, 
-                VideoPlaybackExtension::VideoFlags::mp3,
-                VideoPlaybackExtension::VideoFlags::mp4
-            )
-        );
-        ExtensionArray.push_back(
             std::make_unique<SelectFileExtension::SelectFileExtension>(
                 hWnd, 
-                hInstance_, 
-                SelectFileExtension::FileExtensionFlags::exe,
+                hInstance_,
                 SelectFileExtension::FileExtensionFlags::mp3
             )
         );

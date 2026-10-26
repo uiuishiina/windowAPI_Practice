@@ -11,7 +11,7 @@ namespace MenuExtension {
     /// <summary>
     /// メニュー拡張機能
     /// </summary>
-    class MenuExtension final : public ApplicationExtensionBase
+    class MenuExtension : public ApplicationExtensionBase
     {
     public:
 
@@ -332,14 +332,12 @@ namespace MenuExtension {
         /// <summary>
         /// メニュー情報セット関数
         /// </summary>
-        /// <param name="hWnd">セットするメニューがあるウィンドウハンドル</param>
         /// <param name="menu">セットするメニュー</param>
         /// <param name="mask">セットするマスク情報</param>
         /// <param name="state">セットするステート</param>
         /// <param name="id">セットするID情報(識別ID)</param>
         /// <returns>セットの成否</returns>
         static bool SetMenuToInfo(
-            HWND hWnd,
             HMENU menu,
             UINT mask,
             UINT state,
@@ -357,6 +355,58 @@ namespace MenuExtension {
 
             return true;
         }
+
+        /// <summary>
+        /// メニュー情報セット関数
+        /// </summary>
+        /// <param name="menu">セットするメニュー</param>
+        /// <param name="mask">セットするマスク情報</param>
+        /// <param name="state">セットするステート</param>
+        /// <param name="id">セットするメニューインデックス</param>
+        /// <returns>セットの成否</returns>
+        static bool SetMenuToInfoByIndex(
+            HMENU menu,
+            UINT mask,
+            UINT state,
+            UINT index
+        ) {
+
+            MENUITEMINFOW item{};
+            item.cbSize = sizeof(item);
+            item.fMask = mask;
+            item.fState = state;
+
+            if (!SetMenuItemInfoW(menu, index, TRUE, &item)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        static bool SetMenuHeaderToInfo(
+            HMENU menu,
+            LPCWSTR text,
+            UINT index,
+            UINT mask = MIIM_STRING | MIIM_FTYPE | MIIM_STATE,
+            UINT type = MFT_STRING,
+            UINT state = MFS_ENABLED
+        ) {
+
+            MENUITEMINFOW item{};
+            item.cbSize = sizeof(item);
+            item.fMask = mask;
+            item.fType = type;
+            item.fState = state;
+            item.dwTypeData = const_cast<LPWSTR>(text);
+
+            if (!SetMenuItemInfoW(menu, index, TRUE, &item)) {
+                return false;
+            }
+
+            return true;
+        }
+
+
 
         /* ===== メニュー情報作成 ===== */
 
@@ -403,6 +453,21 @@ namespace MenuExtension {
             return item;
         }
 
+        //  見出し
+        static MENUITEMINFOW MakeMenuHeader(
+            LPCWSTR text,
+            UINT type = MFT_STRING,
+            UINT state = MFS_ENABLED
+        ) {
+            MENUITEMINFOW item{};
+            item.cbSize = sizeof(item);
+            item.fMask = MIIM_STRING | MIIM_FTYPE | MIIM_STATE;
+            item.fType = type;
+            item.fState = state;
+            item.dwTypeData = const_cast<LPWSTR>(text);
+
+            return item;
+        }
 
         static MENUITEMINFOW MakeMenuItemToInfo(
             UINT mask,

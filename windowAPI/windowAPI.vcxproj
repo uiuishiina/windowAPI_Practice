@@ -143,19 +143,21 @@
   <ItemGroup>
     <ClInclude Include="Application.h" />
     <ClInclude Include="ApplocationExtensionBase.h" />
+    <ClInclude Include="Extension\BitFlag.h" />
+    <ClInclude Include="Extension\BitFlagExtension.h" />
+    <ClInclude Include="Extension\EnumToIndex.h" />
     <ClInclude Include="Extension\MenuExtension.h" />
+    <ClInclude Include="Extension\RoundValue.h" />
     <ClInclude Include="Extension\SelectFileExtension.h" />
     <ClInclude Include="Extension\SubWindow.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="VideoPlaybackExtension.h" />
     <ClInclude Include="windowAPI.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
     <ClCompile Include="Extension\SelectFileExtension.cpp" />
-    <ClCompile Include="VideoPlaybackExtension.cpp" />
     <ClCompile Include="windowAPI.cpp" />
   </ItemGroup>
   <ItemGroup>
