@@ -149,10 +149,6 @@ std::wstring SelectFileExtension::SelectFileExtension::SelectPath() const {
 void SelectFileExtension::SelectFileExtension::LoadFolderToPath(std::wstring path) {
 
     //  エラーチェック
-    if (LoadFlag_.none()) {
-        ShowMessage(L"FileExtension Flag Not Set", ErrorLogW);
-        return;
-    }
     if (!std::filesystem::exists(path)) {
         ShowMessage(L"Folder Path Not Found", ErrorLogW);
         return;
@@ -176,40 +172,40 @@ void SelectFileExtension::SelectFileExtension::LoadFolderToPath(std::wstring pat
             for (char& c : ext) {
                 c = std::tolower(c);
             }
-            if (LoadFlag_.test(FileExtensionFlags::none)) {
+            if (LoadFlag_->Test(FileExtensionFlags::None)) {
                 return false;
             }
-            else if (LoadFlag_.test(FileExtensionFlags::all)) {
+            else if (LoadFlag_->Test(FileExtensionFlags::All)) {
                 return true;
             }
 
             //判定
-            if (LoadFlag_.test(FileExtensionFlags::mp3)) {
+            if (LoadFlag_->Test(FileExtensionFlags::mp3)) {
                 if (ext == ".mp3") {
                     return true;
                 }
             }
-            if (LoadFlag_.test(FileExtensionFlags::wav)) {
+            if (LoadFlag_->Test(FileExtensionFlags::wav)) {
                 if (ext == ".wav") {
                     return true;
                 }
             }
-            if (LoadFlag_.test(FileExtensionFlags::mp4)) {
+            if (LoadFlag_->Test(FileExtensionFlags::mp4)) {
                 if (ext == ".mp4") {
                     return true;
                 }
             }
-            if (LoadFlag_.test(FileExtensionFlags::exe)) {
+            if (LoadFlag_->Test(FileExtensionFlags::exe)) {
                 if (ext == ".exe") {
                     return true;
                 }
             }
-            if (LoadFlag_.test(FileExtensionFlags::png)) {
+            if (LoadFlag_->Test(FileExtensionFlags::png)) {
                 if (ext == ".png") {
                     return true;
                 }
             }
-            if (LoadFlag_.test(FileExtensionFlags::jpg)) {
+            if (LoadFlag_->Test(FileExtensionFlags::jpg)) {
                 if (ext == ".jpg") {
                     return true;
                 }
@@ -290,13 +286,13 @@ void SelectFileExtension::SelectFileExtension::SetHeaderMenu() const {
 
     std::wstring text = LoadedPath_.empty() ? L"未設定" : LoadedPath_;
     std::wstring passText = L"読み込み開始位置パス : " + text;
-    auto result = MenuExtension::MenuFactory::SetMenuHeaderToInfo(
+    auto result = MenuExt::MenuFactory::SetMenuHeaderToInfo(
         GetSubMenu(ListMenu_->WindowMenu_, 0),
         passText.c_str(),
         4
     );
     auto sizeText = L"ファイル数 : " + std::to_wstring(FilePassContainer_.size());
-    result = MenuExtension::MenuFactory::SetMenuHeaderToInfo(
+    result = MenuExt::MenuFactory::SetMenuHeaderToInfo(
         GetSubMenu(ListMenu_->WindowMenu_, 0),
         sizeText.c_str(),
         5
@@ -346,40 +342,40 @@ void SelectFileExtension::SelectFileExtension::ShowConrainer() {
         for (char& c : ext) {
             c = std::tolower(c);
         }
-        if (ShowFlag_.test(FileExtensionFlags::none)) {
+        if (ShowFlag_->Test(FileExtensionFlags::None)) {
             return false;
         }
-        else if (ShowFlag_.test(FileExtensionFlags::all)) {
+        else if (ShowFlag_->Test(FileExtensionFlags::All)) {
             return true;
         }
 
         //判定
-        if (ShowFlag_.test(FileExtensionFlags::mp3)) {
+        if (ShowFlag_->Test(FileExtensionFlags::mp3)) {
             if (ext == ".mp3") {
                 return true;
             }
         }
-        if (ShowFlag_.test(FileExtensionFlags::wav)) {
+        if (ShowFlag_->Test(FileExtensionFlags::wav)) {
             if (ext == ".wav") {
                 return true;
             }
         }
-        if (ShowFlag_.test(FileExtensionFlags::mp4)) {
+        if (ShowFlag_->Test(FileExtensionFlags::mp4)) {
             if (ext == ".mp4") {
                 return true;
             }
         }
-        if (ShowFlag_.test(FileExtensionFlags::exe)) {
+        if (ShowFlag_->Test(FileExtensionFlags::exe)) {
             if (ext == ".exe") {
                 return true;
             }
         }
-        if (ShowFlag_.test(FileExtensionFlags::png)) {
+        if (ShowFlag_->Test(FileExtensionFlags::png)) {
             if (ext == ".png") {
                 return true;
             }
         }
-        if (ShowFlag_.test(FileExtensionFlags::jpg)) {
+        if (ShowFlag_->Test(FileExtensionFlags::jpg)) {
             if (ext == ".jpg") {
                 return true;
             }

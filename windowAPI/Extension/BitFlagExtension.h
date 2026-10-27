@@ -13,11 +13,11 @@ namespace BitFlagExtension {
 
 		template<typename T>
 		concept EnumHasNone = std::is_enum_v <T>
-			&& requires { T::None; };
+			&& requires { T::none; };
 
 		template<typename T>
 		concept EnumHasAll = std::is_enum_v <T>
-			&& requires { T::All; };
+			&& requires { T::all; };
 
 		template<HandyItem::Enum::concepts::IsEnum T>
 		constexpr bool EnumHasNoneCheck() {
@@ -31,6 +31,9 @@ namespace BitFlagExtension {
 				T::All;
 			};
 		}
+
+		template<typename T, typename U>
+		concept IsSame = std::same_as<T, U>;
 	}
 
 	/// <summary>
@@ -38,22 +41,18 @@ namespace BitFlagExtension {
 	/// </summary>
 	/// <typeparam name="T">ビットフラグ化する列挙体</typeparam>
 	template<HandyItem::Enum::concepts::EnumHasCount T>
-	class BitFlagExtension : ApplicationExtensionBase
+	class BitFlagExtension
 	{
 	public:
 
-		/// <summary>
-		/// コンストラクタ
-		/// </summary>
-		explicit BitFlagExtension(HWND hWnd, HINSTANCE hInstance) :
-			ApplicationExtensionBase{ hWnd ,hInstance } {}
+		template<Concepts::IsSame<T>... Args>
+		explicit BitFlagExtension(Args... args) :
+			Flag_{ args... } {}
 
 		/// <summary>
 		/// デストラクタ
 		/// </summary>
 		~BitFlagExtension() = default;
-
-		void ExtensionProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) override {};
 
 		/// <summary>
 		/// フラグ切り替え関数
@@ -139,10 +138,11 @@ namespace BitFlagExtension {
 				++i
 				) {
 
-				if (Flag_.test(HandyItem::Enum::index_to_enum(i))) {
+				if (Flag_.test(HandyItem::Enum::index_to_enum<T>(i))) {
 					return false;
 				}
 			}
+			return true;
 		}
 
 		/// <summary>
@@ -158,10 +158,11 @@ namespace BitFlagExtension {
 				++i
 				) {
 
-				if (!Flag_.test(HandyItem::Enum::index_to_enum(i))) {
+				if (!Flag_.test(HandyItem::Enum::index_to_enum<T>(i))) {
 					return false;
 				}
 			}
+			return true;
 		}
 
 	private:
@@ -186,94 +187,109 @@ namespace BitFlagExtension {
 
 
 	template<HandyItem::Enum::concepts::EnumHasCount T>
-	class BitFlagMenuExtension : protected BitFlagExtension<T>, public MenuExtension::MenuExtension
+	class BitFlagMenuExtension : public BitFlagExtension<T>
 	{
 	public:
 
-		explicit BitFlagMenuExtension(HWND hWnd, HINSTANCE hInstance) :
-			BitFlagExtension<T>{ hWnd,hInstance },
-			MenuExtension::MenuExtension{ hWnd ,hInstance },
-			HasNoneFlag_{ Concepts::EnumHasNoneCheck<T>() },
-			HasNoneFlag_{ Concepts::EnumHasAllCheck<T>() }{};
+		template<Concepts::IsSame<T>... Args>
+		explicit BitFlagMenuExtension(Args... args) :
+			BitFlagExtension<T>{}{
+			((this->ToggleFlag(args)), ...);
+		};
 
 		~BitFlagMenuExtension() = default;
 
-
+		template<typename MenuData>
+		requires std::derived_from<MenuData,BitFlagMenuBase<T>>
 		bool IlitializeFlagMenu(
 			HMENU toSetMenu,
-			HMENU rootMenu,
 			const wchar_t* menuName,
-			std::initializer_list<BitFlagMenuBase<T>> datas
+			std::span<const MenuData> datas,
+			MenuExt::MenuExtension* rootMenu,
+			std::function<void(WPARAM, LPARAM)> addFunc = [](WPARAM, LPARAM){}
 		) {
 
 			std::vector<MENUITEMINFOW> items{};
 
 			for (auto& data : datas) {
-				items.push_back(MenuExtension::MenuFactory::MakeMenuItem(
+				items.push_back(MenuExt::MenuFactory::MakeMenuItem(
 					data.id,
 					data.text,
 					CheckFlag(data.value)
 				));
-				if (FlugMenu_.try_emplace(data.id, data.value).second) {
-					AddMenuFunction(data.id, [&](WPARAM wParam, LPARAM lParam) {
 
-						ToggleFlag(data.id);
-						SetAllFlagMenu(rootMenu);
+				FlugMenuMap_.try_emplace(data.id, data.value);
 
+				rootMenu->AddMenuFunction(data.id, [this, id = data.id, value = data.value, rootMenu, addFunc]
+				(WPARAM wParam, LPARAM lParam) {
+
+						ToggleFlag(id);
+
+						CheakNoneAll();
+
+						ReloadAllFlagMenu(rootMenu->WindowMenu_);
+						addFunc(wParam, lParam);
 					});
-				}
 			}
-			return MenuExtension::MenuFactory::AddSubMenu(
+			return MenuExt::MenuFactory::AddSubMenu(
 				toSetMenu,
-				MenuExtension::MenuFactory::CreatePopupMenuToInfo(items),
+				MenuExt::MenuFactory::CreatePopupMenuToInfo(items),
 				menuName
 			);
+		}
+
+		void SetNoneRange(T end, T start = T{}) {
+			NoneRange_ = { end,start };
+		}
+
+		void SetAllRange(T end, T start = T{}) {
+			AllRange_ = { end,start };
 		}
 
 		void ToggleFlag(T value) {
 			if (value == T::Count) {
 				return;
 			}
-			else if constexpr (HasNoneFlag_) {
+			
+			if constexpr (HasNoneFlag_) {
 				if (value == T::None) {
 					ToggleNone();
 					return;
 				}
 			}
-			else if constexpr (HasAllFlag_) {
+
+			if constexpr (HasAllFlag_) {
 				if (value == T::All) {
 					ToggleAll();
 					return;
 				}
 			}
-			else {
-				Toggle(value);
-			}
+			this->Toggle(value);
 		}
 
-		void TpggleFlag(UINT id) {
+		void ToggleFlag(const UINT& id) {
 
-			const auto it = FlugMenu_.find(id);
-			if (it == FlugMenu_.end()) {
+			const auto it = FlugMenuMap_.find(id);
+			if (it == FlugMenuMap_.end()) {
 				return;
 			}
 
-			TpggleFlag(it.second);
+			ToggleFlag(it->second);
 		}
 
-		bool CheckNone(T end, T start = T{}) {
-			return RangeNone(end, start);
+		bool CheckNone() {
+			return this->RangeNone(NoneRange_.first, NoneRange_.second);
 		}
-		bool CheckAll(T end, T start = T{}) {
-			return RangeAll(end, start);
+		bool CheckAll() {
+			return this->RangeAll(AllRange_.first, AllRange_.second);
 		}
 
 		void SetMenu(
 			HMENU menu,
 			UINT id,
-			UINT state = CheckFlag(id)
+			UINT state
 		) {
-			MenuExtension::MenuFactory::SetMenuToInfo(
+			MenuExt::MenuFactory::SetMenuToInfo(
 				menu,
 				MIIM_STATE,
 				state,
@@ -281,20 +297,22 @@ namespace BitFlagExtension {
 			);
 		}
 
-		void SetAllFlagMenu(HMENU menu) {
+		void ReloadAllFlagMenu(HMENU menu) {
 
-			for (auto& it : FlugMenu_) {
-				SetMenu(menu, it.second);
+			CheakNoneAll();
+
+			for (auto& it : FlugMenuMap_) {
+				SetMenu(menu, it.first, CheckFlag(it.first));
 			}
 		}
 
 		/// <summary>
 		/// フラグチェック関数
 		/// </summary>
-		/// <param name="flag">ファイル読み込みフラグ</param>
+		/// <param name="value">ファイル読み込みフラグ</param>
 		/// <returns>チェック識別子</returns>
 		UINT CheckFlag(T value) {
-			return Test(value) ? MFS_CHECKED : MFS_UNCHECKED;
+			return this->Test(value) ? MFS_CHECKED : MFS_UNCHECKED;
 		}
 
 		/// <summary>
@@ -304,12 +322,12 @@ namespace BitFlagExtension {
 		/// <returns>チェック識別子</returns>
 		UINT CheckFlag(UINT id) {
 
-			const auto it = FlugMenu_.find(id);
-			if (it == FlugMenu_.end()) {
+			const auto it = FlugMenuMap_.find(id);
+			if (it == FlugMenuMap_.end()) {
 				return MFS_UNCHECKED;
 			}
 
-			return CheckFlag(it.second);
+			return CheckFlag(it->second);
 		}
 
 	private:
@@ -317,25 +335,30 @@ namespace BitFlagExtension {
 		/// <summary>
 		/// None識別子確認フラグ
 		/// </summary>
-		bool HasNoneFlag_{};
+		static constexpr bool HasNoneFlag_ =
+			Concepts::EnumHasNoneCheck<T>();
 
 		/// <summary>
 		/// All識別子確認フラグ
 		/// </summary>
-		bool HasAllFlag_{};
+		static constexpr bool HasAllFlag_ =
+			Concepts::EnumHasAllCheck<T>();
+
+		std::pair<T, T> NoneRange_{};
+		std::pair<T, T> AllRange_{};
 
 		/// <summary>
 		/// メニューID保存マップ
 		/// </summary>
-		std::unordered_map<UINT, T> FlugMenu_{};
+		std::unordered_map<UINT, T> FlugMenuMap_{};
 
 		/// <summary>
 		/// Noneフラグ入力時関数
 		/// </summary>
 		void ToggleNone() {
-			ResetFlag<T>();
+			this->ResetFlag();
 			if constexpr (HasNoneFlag_) {
-				SetFlag(T::None);
+				this->SetFlag(T::None);
 			}
 		}
 
@@ -343,9 +366,34 @@ namespace BitFlagExtension {
 		/// Allフラグ入力時フラグ
 		/// </summary>
 		void ToggleAll() {
-			SetFlag<T>();
-			if constexpr (HasAllFlag_) {
-				SetFlag(T::All);
+			this->SetFlag();
+			if constexpr (HasNoneFlag_) {
+				this->ResetFlag(T::None);
+			}
+		}
+
+		void CheakNoneAll() {
+
+			if (CheckNone()) {
+				if constexpr (HasNoneFlag_) {
+					this->SetFlag(T::None);
+				}
+			}
+			else {
+				if constexpr (HasNoneFlag_) {
+					this->ResetFlag(T::None);
+				}
+			}
+
+			if (CheckAll()) {
+				if constexpr (HasAllFlag_) {
+					this->SetFlag(T::All);
+				}
+			}
+			else {
+				if constexpr (HasAllFlag_) {
+					this->ResetFlag(T::All);
+				}
 			}
 		}
 

@@ -6,7 +6,7 @@
 #include<unordered_map>
 #include<span>
 
-namespace MenuExtension {
+namespace MenuExt {
 
     /// <summary>
     /// メニュー拡張機能

@@ -27,8 +27,8 @@ namespace SelectFileExtension {
         png,
         jpg,
 
-        none,
-        all,
+        None,
+        All,
         Count
     };
 
@@ -50,23 +50,7 @@ namespace SelectFileExtension {
     /// <summary>
     /// ファイル読み込みフラグ設定構造体
     /// </summary>
-    struct FileExtensionMenuInfo {
-
-        /// <summary>
-        /// 対応したフラグID列挙体
-        /// </summary>
-        UINT id;
-
-        /// <summary>
-        /// メニュー表示名
-        /// </summary>
-        LPCWSTR text;
-
-        /// <summary>
-        /// 対応したファイル読み込みフラグ列挙体
-        /// </summary>
-        FileExtensionFlags flag;
-    };
+    struct FileExtensionMenuInfo : public BitFlagExtension::BitFlagMenuBase<FileExtensionFlags> {};
 
     /// <summary>
     /// ファイル読み込みフラグ設定構造体配列
@@ -78,8 +62,8 @@ namespace SelectFileExtension {
     { IDM_EXT_EXE,  L"EXE",     FileExtensionFlags::exe },
     { IDM_EXT_PNG,  L"PNG",     FileExtensionFlags::png },
     { IDM_EXT_JPG,  L"JPG",     FileExtensionFlags::jpg },
-    { IDM_EXT_NONE, L"NONE",    FileExtensionFlags::none },
-    { IDM_EXT_ALL,  L"ALL",     FileExtensionFlags::all },
+    { IDM_EXT_NONE, L"NONE",    FileExtensionFlags::None },
+    { IDM_EXT_ALL,  L"ALL",     FileExtensionFlags::All },
     };
 
     /// <summary>
@@ -100,24 +84,7 @@ namespace SelectFileExtension {
     /// <summary>
     /// 読み込みファイルリスト表示フラグ設定構造体
     /// </summary>
-    struct FileShowMenuInfo {
-
-        /// <summary>
-        /// 対応した読み込みファイルリスト表示フラグID列挙体
-        /// </summary>
-        UINT id;
-
-        /// <summary>
-        /// メニュー表示名
-        /// </summary>
-        LPCWSTR text;
-
-        /// <summary>
-        /// 対応したファイル読み込みフラグ列挙体
-        /// </summary>
-        FileExtensionFlags flag;
-
-    };
+    struct FileShowMenuInfo : public BitFlagExtension::BitFlagMenuBase<FileExtensionFlags> {};
 
     constexpr FileShowMenuInfo FileShowMenuItems[] = {
         { IDM_EXT_SHOW_MP3,     L"MP3",     FileExtensionFlags::mp3 },
@@ -126,8 +93,8 @@ namespace SelectFileExtension {
         { IDM_EXT_SHOW_EXE,     L"EXE",     FileExtensionFlags::exe },
         { IDM_EXT_SHOW_PNG,     L"PNG",     FileExtensionFlags::png },
         { IDM_EXT_SHOW_JPG,     L"JPG",     FileExtensionFlags::jpg },
-        { IDM_EXT_SHOW_NONE,    L"NONE",    FileExtensionFlags::none },
-        { IDM_EXT_SHOW_ALL,     L"ALL",     FileExtensionFlags::all },
+        { IDM_EXT_SHOW_NONE,    L"NONE",    FileExtensionFlags::None },
+        { IDM_EXT_SHOW_ALL,     L"ALL",     FileExtensionFlags::All },
     };
 
     /// <summary>
@@ -250,41 +217,34 @@ namespace SelectFileExtension {
         /// <typeparam name="...flags">開始フラグ設定</typeparam>
         /// <param name="hWnd">親ウィンドウハンドル</param>
         /// <param name="hInstance">ウィンドウインスタンス</param>
-        /// <param name="...flag">開始フラグ設定</param>
+        /// <param name="...value">開始フラグ設定</param>
         template<IsFileExtensionFlags... flags>
         explicit SelectFileExtension(HWND hWnd, HINSTANCE hInstance, flags... flag) :
             ApplicationExtensionBase{ hWnd, hInstance },
             SubWindow{ L"SelectFileWindow" },
-            LoadFlag_{ flag... },
-            ShowFlag_{ flag... } {
+            LoadFlag_{ 
+                std::make_unique<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags>>(flag...)
+            },
+            ShowFlag_{ 
+                std::make_unique<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags>>(flag...)
+            } {
 
             //  ウィンドウクラス登録
             const auto wc = CreateWindowClass();
             RegisterClassExW(&wc);
 
             //  親ウィンドウメニュー取得
-            AppMenu_ = std::make_unique<MenuExtension::MenuExtension>(hWnd_, hInstance_);
+            AppMenu_ = std::make_unique<MenuExt::MenuExtension>(hWnd_, hInstance_);
 
             //  クラスメニュー作成
-            auto ExtensionMenu = MenuExtension::MenuFactory::CreatePopupMenuToInfo(
+            auto ExtensionMenu = MenuExt::MenuFactory::CreatePopupMenuToInfo(
                 {
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuItem(
                     CREATE_SELECT_FILE_WINDOW,
                     L"拡張機能ウィンドウ作成"
                     )
                 }
             );
-
-            //  ファイル読み込みフラグ設定メニュー情報作成
-            std::vector<MENUITEMINFOW> Extensionitems{};
-            for (auto& item : FileExtensionItems) {
-                Extensionitems.push_back(
-                    MenuExtension::MenuFactory::MakeMenuItem(
-                        item.id,
-                        item.text,
-                        CheckFlag(LoadFlag_,item.flag)
-                    ));
-            }
 
             //  読み込み階層設定メニュー情報作成
             std::vector<MENUITEMINFOW> Directoryitems{};
@@ -293,7 +253,7 @@ namespace SelectFileExtension {
                 auto index = item.value;
 
                 Directoryitems.push_back(
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuItem(
                         item.id,
                         item.text,
                         DirectoryCount_ == static_cast<unsigned int>(index) ? MFS_CHECKED : MFS_UNCHECKED
@@ -305,67 +265,79 @@ namespace SelectFileExtension {
             for (auto& item : FileCountRangeIDItems) {
 
                 Rangeitems.push_back(
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuItem(
                         item.id,
                         item.text,
                         CheckFlag(FileCountRange_, item.value)
                     ));
             }
 
-            //  ファイル表示フラグ設定メニュー情報作成
-            std::vector<MENUITEMINFOW> Showitems{};
-            for (auto& item : FileShowMenuItems) {
-                Showitems.push_back(
-                    MenuExtension::MenuFactory::MakeMenuItem(
-                        item.id,
-                        item.text,
-                        CheckFlag(ShowFlag_,item.flag)
-                    ));
-            }
-
-
+            
+            
             //  オプションメニュー作成
-            auto Option = MenuExtension::MenuFactory::CreatePopupMenuToInfo({});
-            MenuExtension::MenuFactory::AddSubMenu(
+            auto Option = MenuExt::MenuFactory::CreatePopupMenuToInfo({});
+            
+            //  ファイル読み込みフラグ設定メニュー情報作成
+            LoadFlag_->IlitializeFlagMenu(
                 Option,
                 L"読み込みフラグ設定",
-                Extensionitems
+                std::span<const FileExtensionMenuInfo>{FileExtensionItems},
+                AppMenu_.get(),
+                [this](WPARAM wParam, LPARAM lParam) {
+                    CallMenusFunc(wParam, lParam);
+                }
             );
 
             //  メニュー情報追加
-            MenuExtension::MenuFactory::AddSubMenu(
+            MenuExt::MenuFactory::AddSubMenu(
                 Option,
                 L"読み込み階層",
                 Directoryitems
             );
-            MenuExtension::MenuFactory::AddSubMenu(
+            MenuExt::MenuFactory::AddSubMenu(
                 Option,
                 L"読み込みファイル制限",
                 Rangeitems
             );
-            MenuExtension::MenuFactory::AddSubMenu(
+
+            //  ファイル表示フラグ設定メニュー情報作成
+            ShowFlag_->IlitializeFlagMenu(
                 Option,
                 L"ファイル表示設定",
-                Showitems
+                std::span<const FileShowMenuInfo>{FileShowMenuItems},
+                AppMenu_.get(),
+                [this](WPARAM wParam, LPARAM lParam) {
+                    CallMenusFunc(wParam, lParam);
+                }
             );
 
-            MenuExtension::MenuFactory::AddMenuToInfo(
+            LoadFlag_->SetNoneRange(FileExtensionFlags::None);
+            LoadFlag_->SetAllRange(FileExtensionFlags::None);
+
+            ShowFlag_->SetNoneRange(FileExtensionFlags::None);
+            ShowFlag_->SetAllRange(FileExtensionFlags::None);
+
+            LoadFlag_->ReloadAllFlagMenu(AppMenu_->WindowMenu_);
+            ShowFlag_->ReloadAllFlagMenu(AppMenu_->WindowMenu_);
+
+            MenuExt::MenuFactory::AddMenuToInfo(
                 ExtensionMenu,
-                MenuExtension::MenuFactory::MakeMenuSeparator()
+                MenuExt::MenuFactory::MakeMenuSeparator()
             );
-            MenuExtension::MenuFactory::AddSubMenu(
+            MenuExt::MenuFactory::AddSubMenu(
                 ExtensionMenu,
                 Option,
                 L"Option"
             );
 
             //  クラスメニュー追加
-            MenuExtension::MenuFactory::AddSubMenu(
+            MenuExt::MenuFactory::AddSubMenu(
                 AppMenu_->WindowMenu_,
                 ExtensionMenu,
                 L"ファイル取得機能拡張",
                 GetMenuItemCount(AppMenu_->WindowMenu_)
             );
+
 
             //  クラスメニューに関数追加
             AppMenu_->AddMenuFunction(CREATE_SELECT_FILE_WINDOW, [this](WPARAM wParam, LPARAM lParam) {
@@ -393,173 +365,6 @@ namespace SelectFileExtension {
                 });
 
 
-            //  読み込みフラグ変更
-            for (auto& item : FileExtensionItems) {
-                auto toggleFunc = [&, flag = item.flag,id = item.id]
-                (WPARAM wParam, LPARAM lParam) {
-
-                    if (
-                        flag != FileExtensionFlags::none &&
-                        flag != FileExtensionFlags::all
-                        ) {
-
-                        LoadFlag_.toggle(flag);
-
-                        auto func = [&](bool flag) {
-                            for (size_t i = 0; 
-                                i < HandyItem::Enum::enum_to_index(FileExtensionFlags::none); 
-                                ++i) {
-                                if (LoadFlag_.test(FileExtensionItems[i].flag) != flag) {
-                                    return false;
-                                }
-                            }
-                            return true;
-                            };
-
-                        if (func(true)) {
-                            LoadFlag_.set(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_ALL
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_CHECKED,
-                                    IDM_EXT_ALL
-                                );
-                            }
-                            LoadFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_NONE
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_UNCHECKED,
-                                    IDM_EXT_NONE
-                                );
-                            }
-                        }
-                        else if (func(false)) {
-                            LoadFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_NONE
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_CHECKED,
-                                    IDM_EXT_NONE
-                                );
-                            }
-                            LoadFlag_.set(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_ALL
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_UNCHECKED,
-                                    IDM_EXT_ALL
-                                );
-                            }
-                        }
-                        else {
-                            LoadFlag_.reset(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_ALL
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_UNCHECKED,
-                                    IDM_EXT_ALL
-                                );
-                            }
-                            LoadFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_NONE
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_UNCHECKED,
-                                    IDM_EXT_NONE
-                                );
-                            }
-                        }
-
-                        MenuExtension::MenuFactory::SetMenuToInfo(
-                            AppMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            CheckFlag(LoadFlag_, flag),
-                            id
-                        );
-                        if (SubhWnd_) {
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                CheckFlag(LoadFlag_, flag),
-                                id
-                            );
-                        }
-                    }
-                    else {
-
-                        if (id == FileExtensionFlagID::IDM_EXT_NONE) {
-                            LoadFlag_.set_none();
-                            LoadFlag_.set(FileExtensionFlags::none);
-                        }
-                        else {
-                            LoadFlag_.set_all();
-                            LoadFlag_.reset(FileExtensionFlags::none);
-                        }
-                        for (auto& value : FileExtensionItems) {
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                CheckFlag(LoadFlag_, value.flag),
-                                value.id
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    CheckFlag(LoadFlag_, value.flag),
-                                    value.id
-                                );
-                            }
-                        }
-                    }
-
-                };
-                AppMenu_->AddMenuFunction(item.id, toggleFunc);
-            }
-
             //  読み込み階層変更
             for (auto& item : FileDirectoryIDItems) {
                 auto toggleFunc = [&, id = item.id]
@@ -571,14 +376,14 @@ namespace SelectFileExtension {
 
                         auto check = CheckFlag(DirectoryCount_, value.value);
 
-                        MenuExtension::MenuFactory::SetMenuToInfo(
+                        MenuExt::MenuFactory::SetMenuToInfo(
                             AppMenu_->WindowMenu_,
                             MIIM_STATE,
                             check,
                             value.id
                         );
                         if (SubhWnd_) {
-                            MenuExtension::MenuFactory::SetMenuToInfo(
+                            MenuExt::MenuFactory::SetMenuToInfo(
                                 ListMenu_->WindowMenu_,
                                 MIIM_STATE,
                                 check,
@@ -602,14 +407,14 @@ namespace SelectFileExtension {
 
                         auto check = CheckFlag(FileCountRange_, value.value);
 
-                        MenuExtension::MenuFactory::SetMenuToInfo(
+                        MenuExt::MenuFactory::SetMenuToInfo(
                             AppMenu_->WindowMenu_,
                             MIIM_STATE,
                             check,
                             value.id
                         );
                         if (SubhWnd_) {
-                            MenuExtension::MenuFactory::SetMenuToInfo(
+                            MenuExt::MenuFactory::SetMenuToInfo(
                                 ListMenu_->WindowMenu_,
                                 MIIM_STATE,
                                 check,
@@ -618,172 +423,6 @@ namespace SelectFileExtension {
                         }
                     }
 
-                    };
-                AppMenu_->AddMenuFunction(item.id, toggleFunc);
-            }
-
-            //  表示フラグ変更
-            for (auto& item : FileShowMenuItems) {
-                auto toggleFunc = [&, flag = item.flag, id = item.id]
-                (WPARAM wParam, LPARAM lParam) {
-
-                    if (
-                        flag != FileExtensionFlags::none &&
-                        flag != FileExtensionFlags::all
-                        ) {
-
-                        ShowFlag_.toggle(flag);
-
-                        auto func = [&](bool flag) {
-                            for (size_t i = 0;
-                                i < HandyItem::Enum::enum_to_index(FileExtensionFlags::none);
-                                ++i) {
-                                if (ShowFlag_.test(FileShowMenuItems[i].flag) != flag) {
-                                    return false;
-                                }
-                            }
-                            return true;
-                            };
-
-                        if (func(true)) {
-                            ShowFlag_.set(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_CHECKED,
-                                    IDM_EXT_SHOW_ALL
-                                );
-                            }
-                            ShowFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_UNCHECKED,
-                                    IDM_EXT_SHOW_NONE
-                                );
-                            }
-                        }
-                        else if (func(false)) {
-                            ShowFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_CHECKED,
-                                    IDM_EXT_SHOW_NONE
-                                );
-                            }
-                            ShowFlag_.set(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_UNCHECKED,
-                                    IDM_EXT_SHOW_ALL
-                                );
-                            }
-                        }
-                        else {
-                            ShowFlag_.reset(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_UNCHECKED,
-                                    IDM_EXT_SHOW_ALL
-                                );
-                            }
-                            ShowFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    MFS_UNCHECKED,
-                                    IDM_EXT_SHOW_NONE
-                                );
-                            }
-                        }
-
-                        MenuExtension::MenuFactory::SetMenuToInfo(
-                            AppMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            CheckFlag(ShowFlag_, flag),
-                            id
-                        );
-                        if (SubhWnd_) {
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                CheckFlag(ShowFlag_, flag),
-                                id
-                            );
-                        }
-                    }
-                    else {
-
-                        if (id == FileShowFlagID::IDM_EXT_SHOW_NONE) {
-                            ShowFlag_.set_none();
-                            ShowFlag_.set(FileExtensionFlags::none);
-                        }
-                        else {
-                            ShowFlag_.set_all();
-                            ShowFlag_.reset(FileExtensionFlags::none);
-                        }
-                        for (auto& value : FileShowMenuItems) {
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                CheckFlag(ShowFlag_, value.flag),
-                                value.id
-                            );
-                            if (SubhWnd_) {
-                                MenuExtension::MenuFactory::SetMenuToInfo(
-                                    ListMenu_->WindowMenu_,
-                                    MIIM_STATE,
-                                    CheckFlag(ShowFlag_, value.flag),
-                                    value.id
-                                );
-                            }
-                        }
-                    }
                     };
                 AppMenu_->AddMenuFunction(item.id, toggleFunc);
             }
@@ -840,46 +479,35 @@ namespace SelectFileExtension {
             }
 
             //  サブウィンドウメニュー取得
-            ListMenu_ = std::make_unique<MenuExtension::MenuExtension>(SubhWnd_, hInstance_);
+            ListMenu_ = std::make_unique<MenuExt::MenuExtension>(SubhWnd_, hInstance_);
 
             //  ファイルメニュー作成
-            auto file = MenuExtension::MenuFactory::CreatePopupMenuToInfo(
+            auto file = MenuExt::MenuFactory::CreatePopupMenuToInfo(
                 {
 
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuItem(
                     SELECT_FILE_LOADFOLDER_TO_PATH,
                     L"ファイルLoad"
                     ),
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuItem(
                     SELECT_FILE_RANDOM_SECELT,
                     L"ランダム選択"
                     ),
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuItem(
                     SELECT_FILE_CLEAR_LIST,
                     L"Clear"
                     ),
-                    MenuExtension::MenuFactory::MakeMenuSeparator(),
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuSeparator(),
+                    MenuExt::MenuFactory::MakeMenuItem(
                     SELECT_FILE_LOADFOLDER_TO_LOADED_PATH,
                     L"読み込み開始位置パス : 未設定"
                     ),
-                    MenuExtension::MenuFactory::MakeMenuHeader(
+                    MenuExt::MenuFactory::MakeMenuHeader(
                     L"ファイル数 : 0"
                     )
                 }
             );
-
-            //  ファイル読み込みフラグ設定メニュー情報作成
-            std::vector<MENUITEMINFOW> Extensionitems{};
-            for (auto& item : FileExtensionItems) {
-                Extensionitems.push_back(
-                    MenuExtension::MenuFactory::MakeMenuItem(
-                        item.id,
-                        item.text,
-                        CheckFlag(LoadFlag_,item.flag)
-                ));
-            }
-
+            
             //  読み込み階層設定メニュー情報作成
             std::vector<MENUITEMINFOW> Directoryitems{};
             for (auto& item : FileDirectoryIDItems) {
@@ -887,7 +515,7 @@ namespace SelectFileExtension {
                 auto index = item.value;
 
                 Directoryitems.push_back(
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuItem(
                         item.id,
                         item.text,
                         CheckFlag(DirectoryCount_,index)
@@ -899,58 +527,66 @@ namespace SelectFileExtension {
             for (auto& item : FileCountRangeIDItems) {
 
                 Rangeitems.push_back(
-                    MenuExtension::MenuFactory::MakeMenuItem(
+                    MenuExt::MenuFactory::MakeMenuItem(
                         item.id,
                         item.text,
                         CheckFlag(FileCountRange_, item.value)
                     ));
             }
 
-            //  ファイル表示フラグ設定メニュー情報作成
-            std::vector<MENUITEMINFOW> Showitems{};
-            for (auto& item : FileShowMenuItems) {
-                Showitems.push_back(
-                    MenuExtension::MenuFactory::MakeMenuItem(
-                        item.id,
-                        item.text,
-                        CheckFlag(ShowFlag_,item.flag)
-                    ));
-            }
 
             //  オプションメニュー作成
-            auto option = MenuExtension::MenuFactory::CreatePopupMenuToInfo({});
-            MenuExtension::MenuFactory::AddSubMenu(
+            auto option = MenuExt::MenuFactory::CreatePopupMenuToInfo({});
+
+            //  ファイル読み込みフラグ設定メニュー情報作成
+            LoadFlag_->IlitializeFlagMenu(
                 option,
                 L"読み込みフラグ設定",
-                Extensionitems
+                std::span<const FileExtensionMenuInfo>{FileExtensionItems},
+                ListMenu_.get(),
+                [this](WPARAM wParam, LPARAM lParam) {
+                    ShowConrainer();
+                    CallMenusFunc(wParam, lParam);
+
+                    if (!LoadedPath_.empty()) {
+                        ReloadPath();
+                    }
+                }
             );
             
             //  メニュー情報追加
-            MenuExtension::MenuFactory::AddSubMenu(
+            MenuExt::MenuFactory::AddSubMenu(
                 option,
                 L"読み込み階層",
                 Directoryitems
             );
-            MenuExtension::MenuFactory::AddSubMenu(
+            MenuExt::MenuFactory::AddSubMenu(
                 option,
                 L"読み込みファイル制限",
                 Rangeitems
             );
-            MenuExtension::MenuFactory::AddSubMenu(
+
+            //  ファイル表示フラグ設定メニュー情報作成
+            ShowFlag_->IlitializeFlagMenu(
                 option,
-                L"ファイル表示フラグ設定",
-                Showitems
+                L"ファイル表示設定",
+                std::span<const FileShowMenuInfo>{FileShowMenuItems},
+                ListMenu_.get(),
+                [this](WPARAM wParam, LPARAM lParam) {
+                    ShowConrainer();
+                    CallMenusFunc(wParam, lParam);
+                }
             );
 
             //  サブウィンドウメニュー追加
-            MenuExtension::MenuFactory::AddSubMenu(
+            MenuExt::MenuFactory::AddSubMenu(
                 ListMenu_->WindowMenu_,
                 file,
                 L"File"
             );
 
             //  サブウィンドウメニュー追加
-            MenuExtension::MenuFactory::AddSubMenu(
+            MenuExt::MenuFactory::AddSubMenu(
                 ListMenu_->WindowMenu_,
                 option,
                 L"オプション"
@@ -1023,160 +659,6 @@ namespace SelectFileExtension {
                 });
             
 
-            //  読み込みフラグ変更
-            for (auto& item : FileExtensionItems) {
-                auto toggleFunc = [&, flag = item.flag, id = item.id]
-                (WPARAM wParam, LPARAM lParam) {
-
-                    if (
-                        flag != FileExtensionFlags::none &&
-                        flag != FileExtensionFlags::all
-                        ) {
-
-                        LoadFlag_.toggle(flag);
-
-                        auto func = [&](bool flag) {
-                            for (size_t i = 0;
-                                i < HandyItem::Enum::enum_to_index(FileExtensionFlags::none);
-                                ++i) {
-                                if (LoadFlag_.test(FileExtensionItems[i].flag) != flag) {
-                                    return false;
-                                }
-                            }
-                            return true;
-                            };
-
-                        if (func(true)) {
-                            LoadFlag_.set(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_ALL
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_ALL
-                            );
-                            LoadFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_NONE
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_NONE
-                            );
-                        }
-                        else if (func(false)) {
-                            LoadFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_NONE
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_NONE
-                            );
-                            LoadFlag_.set(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_ALL
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_ALL
-                            );
-                        }
-                        else {
-                            LoadFlag_.reset(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_ALL
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_ALL
-                            );
-                            LoadFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_NONE
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_NONE
-                            );
-                        }
-
-                        MenuExtension::MenuFactory::SetMenuToInfo(
-                            AppMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            CheckFlag(LoadFlag_, flag),
-                            id
-                        );
-                        MenuExtension::MenuFactory::SetMenuToInfo(
-                            ListMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            CheckFlag(LoadFlag_, flag),
-                            id
-                        );
-                    }
-                    else {
-
-                        if (id == FileExtensionFlagID::IDM_EXT_NONE) {
-                            LoadFlag_.set_none();
-                            LoadFlag_.set(FileExtensionFlags::none);
-                        }
-                        else {
-                            LoadFlag_.set_all();
-                            LoadFlag_.reset(FileExtensionFlags::none);
-                        }
-                        for (auto& value : FileExtensionItems) {
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                CheckFlag(LoadFlag_, value.flag),
-                                value.id
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                CheckFlag(LoadFlag_, value.flag),
-                                value.id
-                            );
-                        }
-                    }
-                    if (!LoadedPath_.empty()) {
-                        ReloadPath();
-                    }
-
-                    };
-                ListMenu_->AddMenuFunction(item.id, toggleFunc);
-            }
-
             //  読み込み階層変更
             for (auto& item : FileDirectoryIDItems) {
                 auto toggleFunc = [&, id = item.id]
@@ -1188,13 +670,13 @@ namespace SelectFileExtension {
 
                         auto check = DirectoryCount_ == value.value ? MFS_CHECKED : MFS_UNCHECKED;
 
-                        MenuExtension::MenuFactory::SetMenuToInfo(
+                        MenuExt::MenuFactory::SetMenuToInfo(
                             AppMenu_->WindowMenu_,
                             MIIM_STATE,
                             check,
                             value.id
                         );
-                        MenuExtension::MenuFactory::SetMenuToInfo(
+                        MenuExt::MenuFactory::SetMenuToInfo(
                             ListMenu_->WindowMenu_,
                             MIIM_STATE,
                             check,
@@ -1222,13 +704,13 @@ namespace SelectFileExtension {
 
                         auto check = CheckFlag(FileCountRange_, value.value);
 
-                        MenuExtension::MenuFactory::SetMenuToInfo(
+                        MenuExt::MenuFactory::SetMenuToInfo(
                             AppMenu_->WindowMenu_,
                             MIIM_STATE,
                             check,
                             value.id
                         );
-                        MenuExtension::MenuFactory::SetMenuToInfo(
+                        MenuExt::MenuFactory::SetMenuToInfo(
                             ListMenu_->WindowMenu_,
                             MIIM_STATE,
                             check,
@@ -1239,158 +721,6 @@ namespace SelectFileExtension {
                     if (!LoadedPath_.empty()) {
                         ReloadPath();
                     }
-
-                    };
-                ListMenu_->AddMenuFunction(item.id, toggleFunc);
-            }
-
-            //  表示フラグ変更
-            for (auto& item : FileShowMenuItems) {
-                auto toggleFunc = [&, flag = item.flag, id = item.id]
-                (WPARAM wParam, LPARAM lParam) {
-
-                    if (
-                        flag != FileExtensionFlags::none &&
-                        flag != FileExtensionFlags::all
-                        ) {
-
-                        ShowFlag_.toggle(flag);
-
-                        auto func = [&](bool flag) {
-                            for (size_t i = 0;
-                                i < HandyItem::Enum::enum_to_index(FileExtensionFlags::none);
-                                ++i) {
-                                if (ShowFlag_.test(FileShowMenuItems[i].flag) != flag) {
-                                    return false;
-                                }
-                            }
-                            return true;
-                            };
-
-                        if (func(true)) {
-                            ShowFlag_.set(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                            ShowFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                        }
-                        else if (func(false)) {
-                            ShowFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_CHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                            ShowFlag_.set(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                        }
-                        else {
-                            ShowFlag_.reset(FileExtensionFlags::all);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_ALL
-                            );
-                            ShowFlag_.reset(FileExtensionFlags::none);
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                MFS_UNCHECKED,
-                                IDM_EXT_SHOW_NONE
-                            );
-                        }
-
-                        MenuExtension::MenuFactory::SetMenuToInfo(
-                            AppMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            CheckFlag(ShowFlag_, flag),
-                            id
-                        );
-                        MenuExtension::MenuFactory::SetMenuToInfo(
-                            ListMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            CheckFlag(ShowFlag_, flag),
-                            id
-                        );
-                    }
-                    else {
-
-                        if (id == FileShowFlagID::IDM_EXT_SHOW_NONE) {
-                            ShowFlag_.set_none();
-                            ShowFlag_.set(FileExtensionFlags::none);
-                        }
-                        else {
-                            ShowFlag_.set_all();
-                            ShowFlag_.reset(FileExtensionFlags::none);
-                        }
-                        for (auto& value : FileShowMenuItems) {
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                AppMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                CheckFlag(ShowFlag_, value.flag),
-                                value.id
-                            );
-                            MenuExtension::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                CheckFlag(ShowFlag_, value.flag),
-                                value.id
-                            );
-                        }
-                    }
-                    ShowConrainer();
 
                     };
                 ListMenu_->AddMenuFunction(item.id, toggleFunc);
@@ -1454,7 +784,7 @@ namespace SelectFileExtension {
         /// <summary>
         /// フラグチェック関数
         /// </summary>
-        /// <param name="flag">ファイル読み込みフラグ</param>
+        /// <param name="value">ファイル読み込みフラグ</param>
         /// <returns>チェック識別子</returns>
         UINT CheckFlag(HandyItem::bit::BitFlag<FileExtensionFlags>& flag ,FileExtensionFlags value) {
             return flag.test(value) ? MFS_CHECKED : MFS_UNCHECKED;
@@ -1463,7 +793,7 @@ namespace SelectFileExtension {
         /// <summary>
         /// フラグチェック関数
         /// </summary>
-        /// <param name="flag">チェックする値</param>
+        /// <param name="value">チェックする値</param>
         /// <param name="value">識別値</param>
         /// <returns>チェック識別子</returns>
         UINT CheckFlag(UINT flag,UINT value) {
@@ -1475,12 +805,9 @@ namespace SelectFileExtension {
         /// <summary>
         /// ファイル読み込みフラグ
         /// </summary>
-        HandyItem::bit::BitFlag<FileExtensionFlags> LoadFlag_{};
+        std::unique_ptr<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags>> LoadFlag_{};
 
-        /// <summary>
-        /// ファイル表示フラグ
-        /// </summary>
-        HandyItem::bit::BitFlag<FileExtensionFlags> ShowFlag_{};
+        std::unique_ptr<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags>> ShowFlag_{};
 
         /// <summary>
         /// 読み込み階層設定変数
@@ -1500,12 +827,12 @@ namespace SelectFileExtension {
         /// <summary>
         /// 親ウィンドウメニュー
         /// </summary>
-        std::unique_ptr<MenuExtension::MenuExtension> AppMenu_{};
+        std::unique_ptr<MenuExt::MenuExtension> AppMenu_{};
 
         /// <summary>
         /// サブウィンドウメニュー
         /// </summary>
-        std::unique_ptr<MenuExtension::MenuExtension> ListMenu_{};
+        std::unique_ptr<MenuExt::MenuExtension> ListMenu_{};
 
         /// <summary>
         /// ファイルパス配列
@@ -1519,5 +846,14 @@ namespace SelectFileExtension {
 
         std::wstring LoadedPath_{};
 
+
+        void CallMenusFunc(WPARAM wParam,LPARAM lParam) {
+
+            auto id = LOWORD(wParam);
+            ShowFlag_->ReloadAllFlagMenu(AppMenu_->WindowMenu_);
+            if (ListMenu_) {
+                ShowFlag_->ReloadAllFlagMenu(ListMenu_->WindowMenu_);
+            }
+        }
     };
 }

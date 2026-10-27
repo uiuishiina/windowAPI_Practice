@@ -9,6 +9,7 @@
 #include<memory>
 #include"ApplocationExtensionBase.h"
 #include"Extension/SelectFileExtension.h"
+#include"Extension/ExtentionPractice.h"
 
 #define MAX_LOADSTRING 100
 
@@ -202,7 +203,18 @@ private:
             std::make_unique<SelectFileExtension::SelectFileExtension>(
                 hWnd, 
                 hInstance_,
-                SelectFileExtension::FileExtensionFlags::mp3
+                SelectFileExtension::FileExtensionFlags::mp3,
+                SelectFileExtension::FileExtensionFlags::wav,
+                SelectFileExtension::FileExtensionFlags::mp4,
+                SelectFileExtension::FileExtensionFlags::png,
+                SelectFileExtension::FileExtensionFlags::jpg
+            )
+        );
+
+        ExtensionArray.push_back(
+            std::make_unique<Practice::PracticeExtention>(
+                hWnd, 
+                hInstance_
             )
         );
         

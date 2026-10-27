@@ -146,6 +146,7 @@
     <ClInclude Include="Extension\BitFlag.h" />
     <ClInclude Include="Extension\BitFlagExtension.h" />
     <ClInclude Include="Extension\EnumToIndex.h" />
+    <ClInclude Include="Extension\ExtentionPractice.h" />
     <ClInclude Include="Extension\MenuExtension.h" />
     <ClInclude Include="Extension\RoundValue.h" />
     <ClInclude Include="Extension\SelectFileExtension.h" />
