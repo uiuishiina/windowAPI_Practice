@@ -284,7 +284,11 @@ namespace SelectFileExtension {
                 std::span<const FileExtensionMenuInfo>{FileExtensionItems},
                 AppMenu_.get(),
                 [this](WPARAM wParam, LPARAM lParam) {
-                    CallMenusFunc(wParam, lParam);
+
+                    auto id = LOWORD(wParam);
+                    if (ListMenu_) {
+                        LoadFlag_->ReloadAllFlagMenu(ListMenu_->WindowMenu_);
+                    }
                 }
             );
 
@@ -307,7 +311,11 @@ namespace SelectFileExtension {
                 std::span<const FileShowMenuInfo>{FileShowMenuItems},
                 AppMenu_.get(),
                 [this](WPARAM wParam, LPARAM lParam) {
-                    CallMenusFunc(wParam, lParam);
+
+                    auto id = LOWORD(wParam);
+                    if (ListMenu_) {
+                        ShowFlag_->ReloadAllFlagMenu(ListMenu_->WindowMenu_);
+                    }
                 }
             );
 
@@ -546,7 +554,9 @@ namespace SelectFileExtension {
                 ListMenu_.get(),
                 [this](WPARAM wParam, LPARAM lParam) {
                     ShowConrainer();
-                    CallMenusFunc(wParam, lParam);
+                    
+                    auto id = LOWORD(wParam);
+                    LoadFlag_->ReloadAllFlagMenu(AppMenu_->WindowMenu_);
 
                     if (!LoadedPath_.empty()) {
                         ReloadPath();
@@ -574,7 +584,9 @@ namespace SelectFileExtension {
                 ListMenu_.get(),
                 [this](WPARAM wParam, LPARAM lParam) {
                     ShowConrainer();
-                    CallMenusFunc(wParam, lParam);
+
+                    auto id = LOWORD(wParam);
+                    ShowFlag_->ReloadAllFlagMenu(AppMenu_->WindowMenu_);
                 }
             );
 
@@ -846,14 +858,5 @@ namespace SelectFileExtension {
 
         std::wstring LoadedPath_{};
 
-
-        void CallMenusFunc(WPARAM wParam,LPARAM lParam) {
-
-            auto id = LOWORD(wParam);
-            ShowFlag_->ReloadAllFlagMenu(AppMenu_->WindowMenu_);
-            if (ListMenu_) {
-                ShowFlag_->ReloadAllFlagMenu(ListMenu_->WindowMenu_);
-            }
-        }
     };
 }
