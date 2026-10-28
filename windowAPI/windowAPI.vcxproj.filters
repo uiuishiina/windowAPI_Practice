@@ -27,9 +27,6 @@
     <ClInclude Include="Resource.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="windowAPI.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="Application.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -58,6 +55,9 @@
       <Filter>ヘッダー ファイル\Extension</Filter>
     </ClInclude>
     <ClInclude Include="Extension\ExtentionPractice.h">
+      <Filter>ヘッダー ファイル\Extension</Filter>
+    </ClInclude>
+    <ClInclude Include="Extension\ExclusiveMenuExtension.h">
       <Filter>ヘッダー ファイル\Extension</Filter>
     </ClInclude>
   </ItemGroup>

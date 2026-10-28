@@ -164,7 +164,7 @@ void SelectFileExtension::SelectFileExtension::LoadFolderToPath(std::wstring pat
     
     //  パス内走査
     try {
-        auto Count = DirectoryCount_;
+        auto Count = DirectoryCount_->GetCurrentValue();
         std::function<bool(const std::filesystem::path&)> Judge = [this](const std::filesystem::path& path) {
 
             //拡張子取得
@@ -216,7 +216,7 @@ void SelectFileExtension::SelectFileExtension::LoadFolderToPath(std::wstring pat
         std::function<void(const std::filesystem::path& path)> func = [&, this](const std::filesystem::path& path) {
             for (const auto& item : std::filesystem::directory_iterator(path))
             {
-                if (FileCountRange_ <= FilePassContainer_.size()) {
+                if (FileCountRange_->GetCurrentValue() <= FilePassContainer_.size()) {
                     return;
                 }
                 auto path_ = item.path();
@@ -286,16 +286,21 @@ void SelectFileExtension::SelectFileExtension::SetHeaderMenu() const {
 
     std::wstring text = LoadedPath_.empty() ? L"未設定" : LoadedPath_;
     std::wstring passText = L"読み込み開始位置パス : " + text;
+
+    auto fileMenu = GetSubMenu(ListMenu_->WindowMenu_, 0);
+
     auto result = MenuExt::MenuFactory::SetMenuHeaderToInfo(
-        GetSubMenu(ListMenu_->WindowMenu_, 0),
+        fileMenu,
         passText.c_str(),
-        4
+        GetMenuItemCount(fileMenu) - 2
     );
+
     auto sizeText = L"ファイル数 : " + std::to_wstring(FilePassContainer_.size());
+
     result = MenuExt::MenuFactory::SetMenuHeaderToInfo(
-        GetSubMenu(ListMenu_->WindowMenu_, 0),
+        fileMenu,
         sizeText.c_str(),
-        5
+        GetMenuItemCount(fileMenu) - 1
     );
 }
 

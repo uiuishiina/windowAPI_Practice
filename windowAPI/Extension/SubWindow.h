@@ -1,7 +1,7 @@
 #pragma once
 
 #include"../framework.h"
-#include"../windowAPI.h"
+#include"../Resource.h"
 
 #include<string>
 

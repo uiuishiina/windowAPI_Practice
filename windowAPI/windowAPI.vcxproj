@@ -146,6 +146,7 @@
     <ClInclude Include="Extension\BitFlag.h" />
     <ClInclude Include="Extension\BitFlagExtension.h" />
     <ClInclude Include="Extension\EnumToIndex.h" />
+    <ClInclude Include="Extension\ExclusiveMenuExtension.h" />
     <ClInclude Include="Extension\ExtentionPractice.h" />
     <ClInclude Include="Extension\MenuExtension.h" />
     <ClInclude Include="Extension\RoundValue.h" />
@@ -154,7 +155,6 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="windowAPI.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />

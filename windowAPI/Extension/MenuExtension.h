@@ -119,33 +119,28 @@ namespace MenuExt {
         /// <param name="infos">追加するメニュー情報配列</param>
         /// <returns>作成の成否</returns>
         static bool CreateMenuToInfoVec(
+            HMENU Menu,
+            std::span<const MENUITEMINFOW> infos
+        ) {
+
+            for (auto& info : infos) {
+
+                if (!InsertMenuItemW(Menu, GetMenuItemCount(Menu), TRUE, &info)) {
+                    DestroyMenu(Menu);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        static bool CreateMenuToInfoVec(
             HMENU Menu, 
             std::initializer_list<MENUITEMINFOW> infos
         ) {
 
-            for (auto& info : infos) {
-
-                if (!InsertMenuItemW(Menu, GetMenuItemCount(Menu), TRUE, &info)) {
-                    DestroyMenu(Menu);
-                    return false;
-                }
-            }
-            return true;
+            return CreateMenuToInfoVec(Menu, std::span<const MENUITEMINFOW>{infos});
         }
-        static bool CreateMenuToInfoVec(
-            HMENU Menu, 
-            std::span<MENUITEMINFOW> infos
-        ) {
-
-            for (auto& info : infos) {
-
-                if (!InsertMenuItemW(Menu, GetMenuItemCount(Menu), TRUE, &info)) {
-                    DestroyMenu(Menu);
-                    return false;
-                }
-            }
-            return true;
-        }
+        
 
 
         /// <summary>
@@ -154,25 +149,23 @@ namespace MenuExt {
         /// <param name="infos">追加するメニュー情報配列</param>
         /// <returns>作成の成否</returns>
         static HMENU CreateMenuToInfo(
+            std::span<const MENUITEMINFOW> infos
+        ) {
+
+            auto menu = CreateMenu();
+            if (!menu) {
+                return nullptr;
+            }
+            return CreateMenuToInfoVec(menu, infos) ? menu : nullptr;
+        }
+
+        static HMENU CreateMenuToInfo(
             std::initializer_list<MENUITEMINFOW> infos
         ) {
 
-            auto menu = CreateMenu();
-            if (!menu) {
-                return nullptr;
-            }
-            return CreateMenuToInfoVec(menu, infos) ? menu : nullptr;
+            return CreateMenuToInfo(std::span<const MENUITEMINFOW>{infos});
         }
-        static HMENU CreateMenuToInfo(
-            std::span<MENUITEMINFOW> infos
-        ) {
-
-            auto menu = CreateMenu();
-            if (!menu) {
-                return nullptr;
-            }
-            return CreateMenuToInfoVec(menu, infos) ? menu : nullptr;
-        }
+        
 
         /// <summary>
         /// ポップアップメニュー作成関数
@@ -180,25 +173,23 @@ namespace MenuExt {
         /// <param name="infos">追加するメニュー情報配列</param>
         /// <returns>作成の成否</returns>
         static HMENU CreatePopupMenuToInfo(
+            std::span<const MENUITEMINFOW> infos
+        ) {
+
+                auto menu = CreatePopupMenu();
+                if (!menu) {
+                    return nullptr;
+                }
+                return CreateMenuToInfoVec(menu, infos) ? menu : nullptr;
+        }
+
+        static HMENU CreatePopupMenuToInfo(
             std::initializer_list<MENUITEMINFOW> infos
         ) {
 
-            auto menu = CreatePopupMenu();
-            if (!menu) {
-                return nullptr;
-            }
-            return CreateMenuToInfoVec(menu, infos) ? menu : nullptr;
+            return CreatePopupMenuToInfo(std::span<const MENUITEMINFOW>{infos});
         }
-        static HMENU CreatePopupMenuToInfo(
-            std::span<MENUITEMINFOW> infos
-        ) {
-
-            auto menu = CreatePopupMenu();
-            if (!menu) {
-                return nullptr;
-            }
-            return CreateMenuToInfoVec(menu, infos) ? menu : nullptr;
-        }
+        
 
         /// <summary>
         /// メニュー情報追加関数
@@ -292,8 +283,8 @@ namespace MenuExt {
         /// <returns>追加の成否</returns>
         static bool AddSubMenu(
             HMENU mainMenu,
-            const wchar_t* text,
-            std::initializer_list<MENUITEMINFOW> infos
+            const wchar_t* text, 
+            std::span<const MENUITEMINFOW> infos
         ) {
 
             if (!mainMenu || !text) {
@@ -309,24 +300,14 @@ namespace MenuExt {
 
             return InsertMenuItemW(mainMenu, GetMenuItemCount(mainMenu), TRUE, &item) == TRUE;
         }
+
         static bool AddSubMenu(
             HMENU mainMenu,
             const wchar_t* text,
-            std::span<MENUITEMINFOW> infos
+            std::initializer_list<MENUITEMINFOW> infos
         ) {
 
-            if (!mainMenu || !text) {
-                return false;
-            }
-
-            MENUITEMINFOW item{};
-            item.cbSize = sizeof(item);
-            item.fMask = MIIM_SUBMENU | MIIM_STRING | MIIM_FTYPE;
-            item.fType = MFT_STRING;
-            item.dwTypeData = const_cast<LPWSTR>(text);
-            item.hSubMenu = CreatePopupMenuToInfo(infos);
-
-            return InsertMenuItemW(mainMenu, GetMenuItemCount(mainMenu), TRUE, &item) == TRUE;
+            return AddSubMenu(mainMenu, text, std::span<const MENUITEMINFOW>{infos});
         }
 
         /// <summary>

@@ -1,25 +1,6 @@
 
 #include"Application.h"
 
-INT_PTR CALLBACK Application::About(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hWnd, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
-}
-
 void Application::Keybord(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 
     if (message == WM_KEYDOWN) {

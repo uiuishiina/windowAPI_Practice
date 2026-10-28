@@ -1,7 +1,7 @@
 #pragma once
 
 #include"framework.h"
-#include "windowAPI.h"
+#include"Resource.h"
 #include<objbase.h>
 
 #include<vector>
@@ -114,9 +114,6 @@ private:
             // 選択されたメニューの解析:
             switch (wmId)
             {
-            case IDM_ABOUT:
-                DialogBox(hInstance_, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
             case IDM_EXIT:
                 CheckCloseApp(hWnd);
                 break;
@@ -147,7 +144,6 @@ private:
         return 0;
     }
 
-    INT_PTR static CALLBACK About(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
     void Keybord(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -211,13 +207,6 @@ private:
             )
         );
 
-        ExtensionArray.push_back(
-            std::make_unique<Practice::PracticeExtention>(
-                hWnd, 
-                hInstance_
-            )
-        );
-        
         return TRUE;
     }
 

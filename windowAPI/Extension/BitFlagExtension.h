@@ -1,7 +1,7 @@
 #pragma once
 
 #include"../ApplocationExtensionBase.h"
-#include"../Extension/MenuExtension.h"
+#include"MenuExtension.h"
 
 #include"BitFlag.h"
 
@@ -34,6 +34,7 @@ namespace BitFlagExtension {
 
 		template<typename T, typename U>
 		concept IsSame = std::same_as<T, U>;
+
 	}
 
 	/// <summary>
@@ -184,41 +185,57 @@ namespace BitFlagExtension {
 		T value{};
 	};
 
+	namespace Concepts {
 
+		template<typename T, typename Menu>
+		concept IsBitFlagMenu = std::derived_from<Menu, BitFlagMenuBase<T>>;
+	}
 
-	template<HandyItem::Enum::concepts::EnumHasCount T>
+	template<HandyItem::Enum::concepts::EnumHasCount T,typename Menu>
+		requires Concepts::IsBitFlagMenu<T, Menu>
 	class BitFlagMenuExtension : public BitFlagExtension<T>
 	{
 	public:
 
 		template<Concepts::IsSame<T>... Args>
-		explicit BitFlagMenuExtension(Args... args) :
+		explicit BitFlagMenuExtension(
+			std::span<const Menu> data,
+			Args... args
+		) :
 			BitFlagExtension<T>{}{
+			SetMenuData(data);
 			((this->ToggleFlag(args)), ...);
-		};
+		}
 
-		~BitFlagMenuExtension() = default;
+		template<Concepts::IsSame<T>... Args>
+		explicit BitFlagMenuExtension(
+			std::initializer_list<Menu> data,
+			Args... args
+		) : 
+			BitFlagExtension<T>{} {
+			SetMenuData(data);
+			((this->ToggleFlag(args)), ...);
+		}
 
-		template<typename MenuData>
-		requires std::derived_from<MenuData,BitFlagMenuBase<T>>
-		bool IlitializeFlagMenu(
+			
+		virtual ~BitFlagMenuExtension() = default;
+
+
+		bool InitializeFlagMenu(
 			HMENU toSetMenu,
 			const wchar_t* menuName,
-			std::span<const MenuData> datas,
 			MenuExt::MenuExtension* rootMenu,
 			std::function<void(WPARAM, LPARAM)> addFunc = [](WPARAM, LPARAM){}
 		) {
 
 			std::vector<MENUITEMINFOW> items{};
 
-			for (auto& data : datas) {
+			for (const auto& data : FlagMenuData_) {
 				items.push_back(MenuExt::MenuFactory::MakeMenuItem(
 					data.id,
 					data.text,
 					CheckFlag(data.value)
 				));
-
-				FlugMenuMap_.try_emplace(data.id, data.value);
 
 				rootMenu->AddMenuFunction(data.id, [this, id = data.id, value = data.value, rootMenu, addFunc]
 				(WPARAM wParam, LPARAM lParam) {
@@ -238,12 +255,31 @@ namespace BitFlagExtension {
 			);
 		}
 
+		
+
 		void SetNoneRange(T end, T start = T{}) {
 			NoneRange_ = { end,start };
 		}
 
 		void SetAllRange(T end, T start = T{}) {
 			AllRange_ = { end,start };
+		}
+
+		void SetMenuData(
+			std::span<const Menu> data
+		) {
+
+			for (auto& value : data) {
+				FlagMenuData_.push_back(value);
+				FlagMenuMap_.try_emplace(value.id, value.value);
+			}
+		}
+
+		void SetMenuData(
+			std::initializer_list<Menu> data
+		) {
+
+			SetMenuData(std::span<const Menu>{data});
 		}
 
 		void ToggleFlag(T value) {
@@ -269,8 +305,8 @@ namespace BitFlagExtension {
 
 		void ToggleFlag(const UINT& id) {
 
-			const auto it = FlugMenuMap_.find(id);
-			if (it == FlugMenuMap_.end()) {
+			const auto it = FlagMenuMap_.find(id);
+			if (it == FlagMenuMap_.end()) {
 				return;
 			}
 
@@ -301,7 +337,7 @@ namespace BitFlagExtension {
 
 			CheakNoneAll();
 
-			for (auto& it : FlugMenuMap_) {
+			for (auto& it : FlagMenuMap_) {
 				SetMenu(menu, it.first, CheckFlag(it.first));
 			}
 		}
@@ -322,8 +358,8 @@ namespace BitFlagExtension {
 		/// <returns>チェック識別子</returns>
 		UINT CheckFlag(UINT id) {
 
-			const auto it = FlugMenuMap_.find(id);
-			if (it == FlugMenuMap_.end()) {
+			const auto it = FlagMenuMap_.find(id);
+			if (it == FlagMenuMap_.end()) {
 				return MFS_UNCHECKED;
 			}
 
@@ -347,10 +383,12 @@ namespace BitFlagExtension {
 		std::pair<T, T> NoneRange_{};
 		std::pair<T, T> AllRange_{};
 
+		std::vector<Menu> FlagMenuData_{};
+
 		/// <summary>
 		/// メニューID保存マップ
 		/// </summary>
-		std::unordered_map<UINT, T> FlugMenuMap_{};
+		std::unordered_map<UINT, T> FlagMenuMap_{};
 
 		/// <summary>
 		/// Noneフラグ入力時関数

@@ -1,12 +1,13 @@
 #pragma once
 
 #include"../ApplocationExtensionBase.h"
-#include"../Extension/MenuExtension.h"
-#include"../Extension/SubWindow.h"
+#include"MenuExtension.h"
+#include"SubWindow.h"
 
 #include"BitFlag.h"
 
 #include"BitFlagExtension.h"
+#include"ExclusiveMenuExtension.h"
 
 #include<concepts>
 #include<string>
@@ -123,23 +124,7 @@ namespace SelectFileExtension {
     /// <summary>
     /// 読み込み階層設定構造体
     /// </summary>
-    struct FileDirectoryIDInfo {
-
-        /// <summary>
-        /// 対応する読み込み階層設定ID列挙体
-        /// </summary>
-        UINT    id;
-
-        /// <summary>
-        /// メニュー表示名
-        /// </summary>
-        LPCWSTR text;
-
-        /// <summary>
-        /// 対応する値設定
-        /// </summary>
-        UINT value;
-    };
+    struct FileDirectoryIDInfo : public ExclusiveMenuExtension::ExclusiveMenuBase<UINT> {};
 
     /// <summary>
     /// 読み込み階層設定構造体配列
@@ -167,23 +152,7 @@ namespace SelectFileExtension {
     /// <summary>
     /// ファイル読み込み制限設定構造体
     /// </summary>
-    struct FileCountRangeIDInfo {
-
-        /// <summary>
-        /// ファイル読み込み制限設定ID列挙体
-        /// </summary>
-        UINT    id;
-
-        /// <summary>
-        /// メニュー表示名
-        /// </summary>
-        LPCWSTR text;
-
-        /// <summary>
-        /// 対応する値
-        /// </summary>
-        UINT value;
-    };
+    struct FileCountRangeIDInfo : public ExclusiveMenuExtension::ExclusiveMenuBase<UINT> {};
 
 
     /// <summary>
@@ -223,11 +192,17 @@ namespace SelectFileExtension {
             ApplicationExtensionBase{ hWnd, hInstance },
             SubWindow{ L"SelectFileWindow" },
             LoadFlag_{ 
-                std::make_unique<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags>>(flag...)
+                std::make_unique<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags,FileExtensionMenuInfo>>(FileExtensionItems,flag...)
             },
             ShowFlag_{ 
-                std::make_unique<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags>>(flag...)
-            } {
+                std::make_unique<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags,FileShowMenuInfo>>(FileShowMenuItems,flag...)
+            },
+            DirectoryCount_{
+                std::make_unique<ExclusiveMenuExtension::ExclusiveMenuExtension<UINT, FileDirectoryIDInfo>>(FileDirectoryIDItems,1)
+            },
+            FileCountRange_{
+                std::make_unique<ExclusiveMenuExtension::ExclusiveMenuExtension<UINT, FileCountRangeIDInfo>>(FileCountRangeIDItems,INFINITE)
+            }{
 
             //  ウィンドウクラス登録
             const auto wc = CreateWindowClass();
@@ -246,42 +221,14 @@ namespace SelectFileExtension {
                 }
             );
 
-            //  読み込み階層設定メニュー情報作成
-            std::vector<MENUITEMINFOW> Directoryitems{};
-            for (auto& item : FileDirectoryIDItems) {
-
-                auto index = item.value;
-
-                Directoryitems.push_back(
-                    MenuExt::MenuFactory::MakeMenuItem(
-                        item.id,
-                        item.text,
-                        DirectoryCount_ == static_cast<unsigned int>(index) ? MFS_CHECKED : MFS_UNCHECKED
-                    ));
-            }
-
-            //  ファイル読み込み制限設定メニュー情報作成
-            std::vector<MENUITEMINFOW> Rangeitems{};
-            for (auto& item : FileCountRangeIDItems) {
-
-                Rangeitems.push_back(
-                    MenuExt::MenuFactory::MakeMenuItem(
-                        item.id,
-                        item.text,
-                        CheckFlag(FileCountRange_, item.value)
-                    ));
-            }
-
-            
             
             //  オプションメニュー作成
             auto Option = MenuExt::MenuFactory::CreatePopupMenuToInfo({});
             
             //  ファイル読み込みフラグ設定メニュー情報作成
-            LoadFlag_->IlitializeFlagMenu(
+            LoadFlag_->InitializeFlagMenu(
                 Option,
                 L"読み込みフラグ設定",
-                std::span<const FileExtensionMenuInfo>{FileExtensionItems},
                 AppMenu_.get(),
                 [this](WPARAM wParam, LPARAM lParam) {
 
@@ -292,23 +239,42 @@ namespace SelectFileExtension {
                 }
             );
 
-            //  メニュー情報追加
-            MenuExt::MenuFactory::AddSubMenu(
+            //  読み込み階層設定メニュー情報作成
+            DirectoryCount_->InitializeExclusiveMenu(
                 Option,
-                L"読み込み階層",
-                Directoryitems
+                L"読み込み階層設定",
+                AppMenu_.get(),
+                [this](WPARAM wParam, LPARAM lParam) {
+
+                    if (ListMenu_) {
+                        DirectoryCount_->ReloadAllFlagMenu(ListMenu_->WindowMenu_);
+                    }
+                }
             );
-            MenuExt::MenuFactory::AddSubMenu(
+
+            //  ファイル読み込み制限設定メニュー情報作成
+            FileCountRange_->InitializeExclusiveMenu(
                 Option,
-                L"読み込みファイル制限",
-                Rangeitems
+                L"読み込みファイル数制限設定",
+                AppMenu_.get(),
+                [this](WPARAM wParam, LPARAM lParam) {
+
+                    if (ListMenu_) {
+                        FileCountRange_->ReloadAllFlagMenu(ListMenu_->WindowMenu_);
+                    }
+                }
+            );
+
+            //  横線追加
+            MenuExt::MenuFactory::AddMenuToInfo(
+                Option,
+                MenuExt::MenuFactory::MakeMenuSeparator()
             );
 
             //  ファイル表示フラグ設定メニュー情報作成
-            ShowFlag_->IlitializeFlagMenu(
+            ShowFlag_->InitializeFlagMenu(
                 Option,
                 L"ファイル表示設定",
-                std::span<const FileShowMenuInfo>{FileShowMenuItems},
                 AppMenu_.get(),
                 [this](WPARAM wParam, LPARAM lParam) {
 
@@ -335,7 +301,7 @@ namespace SelectFileExtension {
             MenuExt::MenuFactory::AddSubMenu(
                 ExtensionMenu,
                 Option,
-                L"Option"
+                L"オプション"
             );
 
             //  クラスメニュー追加
@@ -345,7 +311,6 @@ namespace SelectFileExtension {
                 L"ファイル取得機能拡張",
                 GetMenuItemCount(AppMenu_->WindowMenu_)
             );
-
 
             //  クラスメニューに関数追加
             AppMenu_->AddMenuFunction(CREATE_SELECT_FILE_WINDOW, [this](WPARAM wParam, LPARAM lParam) {
@@ -371,69 +336,6 @@ namespace SelectFileExtension {
                     SetForegroundWindow(SubhWnd_);
                 }
                 });
-
-
-            //  読み込み階層変更
-            for (auto& item : FileDirectoryIDItems) {
-                auto toggleFunc = [&, id = item.id]
-                (WPARAM wParam, LPARAM lParam) {
-
-                    DirectoryCount_ = item.value;
-
-                    for (auto& value : FileDirectoryIDItems) {
-
-                        auto check = CheckFlag(DirectoryCount_, value.value);
-
-                        MenuExt::MenuFactory::SetMenuToInfo(
-                            AppMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            check,
-                            value.id
-                        );
-                        if (SubhWnd_) {
-                            MenuExt::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                check,
-                                value.id
-                            );
-                        }
-                    }
-
-                    };
-                AppMenu_->AddMenuFunction(item.id, toggleFunc);
-            }
-
-            //  読み込みファイル制限変更
-            for (auto& item : FileCountRangeIDItems) {
-                auto toggleFunc = [&, id = item.id]
-                (WPARAM wParam, LPARAM lParam) {
-
-                    FileCountRange_ = item.value;
-
-                    for (auto& value : FileCountRangeIDItems) {
-
-                        auto check = CheckFlag(FileCountRange_, value.value);
-
-                        MenuExt::MenuFactory::SetMenuToInfo(
-                            AppMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            check,
-                            value.id
-                        );
-                        if (SubhWnd_) {
-                            MenuExt::MenuFactory::SetMenuToInfo(
-                                ListMenu_->WindowMenu_,
-                                MIIM_STATE,
-                                check,
-                                value.id
-                            );
-                        }
-                    }
-
-                    };
-                AppMenu_->AddMenuFunction(item.id, toggleFunc);
-            }
 
             //  メニューバー表示
             AppMenu_->SetMenuBar(hWnd_, AppMenu_->WindowMenu_);
@@ -498,10 +400,6 @@ namespace SelectFileExtension {
                     L"ファイルLoad"
                     ),
                     MenuExt::MenuFactory::MakeMenuItem(
-                    SELECT_FILE_RANDOM_SECELT,
-                    L"ランダム選択"
-                    ),
-                    MenuExt::MenuFactory::MakeMenuItem(
                     SELECT_FILE_CLEAR_LIST,
                     L"Clear"
                     ),
@@ -516,41 +414,13 @@ namespace SelectFileExtension {
                 }
             );
             
-            //  読み込み階層設定メニュー情報作成
-            std::vector<MENUITEMINFOW> Directoryitems{};
-            for (auto& item : FileDirectoryIDItems) {
-
-                auto index = item.value;
-
-                Directoryitems.push_back(
-                    MenuExt::MenuFactory::MakeMenuItem(
-                        item.id,
-                        item.text,
-                        CheckFlag(DirectoryCount_,index)
-                    ));
-            }
-
-            //  ファイル読み込み制限設定メニュー情報作成
-            std::vector<MENUITEMINFOW> Rangeitems{};
-            for (auto& item : FileCountRangeIDItems) {
-
-                Rangeitems.push_back(
-                    MenuExt::MenuFactory::MakeMenuItem(
-                        item.id,
-                        item.text,
-                        CheckFlag(FileCountRange_, item.value)
-                    ));
-            }
-
-
             //  オプションメニュー作成
             auto option = MenuExt::MenuFactory::CreatePopupMenuToInfo({});
 
             //  ファイル読み込みフラグ設定メニュー情報作成
-            LoadFlag_->IlitializeFlagMenu(
+            LoadFlag_->InitializeFlagMenu(
                 option,
                 L"読み込みフラグ設定",
-                std::span<const FileExtensionMenuInfo>{FileExtensionItems},
                 ListMenu_.get(),
                 [this](WPARAM wParam, LPARAM lParam) {
                     ShowConrainer();
@@ -563,24 +433,42 @@ namespace SelectFileExtension {
                     }
                 }
             );
-            
-            //  メニュー情報追加
-            MenuExt::MenuFactory::AddSubMenu(
+
+            //  読み込み階層設定メニュー情報作成
+            DirectoryCount_->InitializeExclusiveMenu(
                 option,
-                L"読み込み階層",
-                Directoryitems
+                L"読み込み階層設定",
+                ListMenu_.get(),
+                [this](WPARAM wParam, LPARAM lParam) {
+                    
+                    DirectoryCount_->ReloadAllFlagMenu(AppMenu_->WindowMenu_);
+                    if (!LoadedPath_.empty()) {
+                        ReloadPath();
+                    }
+                }
             );
-            MenuExt::MenuFactory::AddSubMenu(
+            
+            //  ファイル読み込み制限設定メニュー情報作成
+            FileCountRange_->InitializeExclusiveMenu(
                 option,
-                L"読み込みファイル制限",
-                Rangeitems
+                L"読み込みファイル数制限設定",
+                ListMenu_.get(),
+                [this](WPARAM wParam, LPARAM lParam) {
+
+                    FileCountRange_->ReloadAllFlagMenu(AppMenu_->WindowMenu_);
+                }
+            );
+
+            //  横線追加
+            MenuExt::MenuFactory::AddMenuToInfo(
+                option,
+                MenuExt::MenuFactory::MakeMenuSeparator()
             );
 
             //  ファイル表示フラグ設定メニュー情報作成
-            ShowFlag_->IlitializeFlagMenu(
+            ShowFlag_->InitializeFlagMenu(
                 option,
                 L"ファイル表示設定",
-                std::span<const FileShowMenuInfo>{FileShowMenuItems},
                 ListMenu_.get(),
                 [this](WPARAM wParam, LPARAM lParam) {
                     ShowConrainer();
@@ -602,6 +490,16 @@ namespace SelectFileExtension {
                 ListMenu_->WindowMenu_,
                 option,
                 L"オプション"
+            );
+            MenuExt::MenuFactory::AddSubMenu(
+                ListMenu_->WindowMenu_,
+                L"その他機能",
+                {
+                    MenuExt::MenuFactory::MakeMenuItem(
+                    SELECT_FILE_RANDOM_SECELT,
+                    L"ランダム選択"
+                )
+                }
             );
 
             //  サブウィンドウメニューに関数追加
@@ -670,74 +568,6 @@ namespace SelectFileExtension {
                 }
                 });
             
-
-            //  読み込み階層変更
-            for (auto& item : FileDirectoryIDItems) {
-                auto toggleFunc = [&, id = item.id]
-                (WPARAM wParam, LPARAM lParam) {
-
-                    DirectoryCount_ = item.value;
-
-                    for (auto& value : FileDirectoryIDItems) {
-
-                        auto check = DirectoryCount_ == value.value ? MFS_CHECKED : MFS_UNCHECKED;
-
-                        MenuExt::MenuFactory::SetMenuToInfo(
-                            AppMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            check,
-                            value.id
-                        );
-                        MenuExt::MenuFactory::SetMenuToInfo(
-                            ListMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            check,
-                            value.id
-                        );
-                    }
-
-                    if (!LoadedPath_.empty()) {
-                        ReloadPath();
-                    }
-
-                    };
-                ListMenu_->AddMenuFunction(item.id, toggleFunc);
-            }
-
-
-            //  読み込みファイル制限変更
-            for (auto& item : FileCountRangeIDItems) {
-                auto toggleFunc = [&, id = item.id]
-                (WPARAM wParam, LPARAM lParam) {
-
-                    FileCountRange_ = item.value;
-
-                    for (auto& value : FileCountRangeIDItems) {
-
-                        auto check = CheckFlag(FileCountRange_, value.value);
-
-                        MenuExt::MenuFactory::SetMenuToInfo(
-                            AppMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            check,
-                            value.id
-                        );
-                        MenuExt::MenuFactory::SetMenuToInfo(
-                            ListMenu_->WindowMenu_,
-                            MIIM_STATE,
-                            check,
-                            value.id
-                        );
-                    }
-
-                    if (!LoadedPath_.empty()) {
-                        ReloadPath();
-                    }
-
-                    };
-                ListMenu_->AddMenuFunction(item.id, toggleFunc);
-            }
-
             //  サブウィンドウメニューバー設定
             ListMenu_->SetMenuBar(SubhWnd_, ListMenu_->WindowMenu_);
 
@@ -817,19 +647,19 @@ namespace SelectFileExtension {
         /// <summary>
         /// ファイル読み込みフラグ
         /// </summary>
-        std::unique_ptr<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags>> LoadFlag_{};
+        std::unique_ptr<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags, FileExtensionMenuInfo>> LoadFlag_{};
 
-        std::unique_ptr<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags>> ShowFlag_{};
+        std::unique_ptr<BitFlagExtension::BitFlagMenuExtension<FileExtensionFlags, FileShowMenuInfo>> ShowFlag_{};
 
         /// <summary>
         /// 読み込み階層設定変数
         /// </summary>
-        UINT DirectoryCount_ = 1;
+        std::unique_ptr<ExclusiveMenuExtension::ExclusiveMenuExtension<UINT, FileDirectoryIDInfo>> DirectoryCount_{};
 
         /// <summary>
         /// ファイル読み込み制限設定変数
         /// </summary>
-        UINT FileCountRange_ = INFINITE;
+        std::unique_ptr<ExclusiveMenuExtension::ExclusiveMenuExtension<UINT, FileCountRangeIDInfo>> FileCountRange_{};
 
         /// <summary>
         /// ファイルパス表示ボックスハンドル

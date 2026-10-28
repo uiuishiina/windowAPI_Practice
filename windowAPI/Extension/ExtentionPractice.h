@@ -1,55 +1,33 @@
 #pragma once
 
-#include"BitFlagExtension.h"
+#include"ExclusiveMenuExtension.h"
 #include"SubWindow.h"
 
 #include<memory>
 
 namespace Practice {
 
-
-    enum class PracticeFlags {
-        mp3,
-        wav,
-        mp4,
-        exe,
-        png,
-        jpg,
-
-        None,
-        All,
-        Count
-    };
-
     enum PracticeFlagID : UINT {
-        IDM_EXT_MP3 = 15001,
-        IDM_EXT_WAV,
-        IDM_EXT_MP4,
-        IDM_EXT_EXE,
-        IDM_EXT_PNG,
-        IDM_EXT_JPG,
-
-        IDM_EXT_NONE,
-        IDM_EXT_ALL
+        IDM_EXT_PF1 = 15001,
+        IDM_EXT_PF2,
+        IDM_EXT_PF3,
+        IDM_EXT_PF4,
+        IDM_EXT_PF5,
+        IDM_EXT_PF6
     };
 
-    struct PracticeMenuInfo : public BitFlagExtension::BitFlagMenuBase<PracticeFlags> {};
+    struct PracticeMenuInfo : public ExclusiveMenuExtension::ExclusiveMenuBase<UINT> {};
 
-    /// <summary>
-    /// ファイル読み込みフラグ設定構造体配列
-    /// </summary>
     constexpr PracticeMenuInfo PracticeItems[] = {
-    { IDM_EXT_MP3,  L"MP3",     PracticeFlags::mp3 },
-    { IDM_EXT_WAV,  L"WAV",     PracticeFlags::wav },
-    { IDM_EXT_MP4,  L"MP4",     PracticeFlags::mp4 },
-    { IDM_EXT_EXE,  L"EXE",     PracticeFlags::exe },
-    { IDM_EXT_PNG,  L"PNG",     PracticeFlags::png },
-    { IDM_EXT_JPG,  L"JPG",     PracticeFlags::jpg },
-    { IDM_EXT_NONE, L"NONE",    PracticeFlags::None },
-    { IDM_EXT_ALL,  L"ALL",     PracticeFlags::All },
+    { IDM_EXT_PF1,  L"1",     1 },
+    { IDM_EXT_PF2,  L"2",     2 },
+    { IDM_EXT_PF3,  L"3",     3 },
+    { IDM_EXT_PF4,  L"4",     4 },
+    { IDM_EXT_PF5,  L"5",     5 },
+    { IDM_EXT_PF6,  L"6",     6 }
     };
 
-    class PracticeExtention : public MenuExt::MenuExtension, public BitFlagExtension::BitFlagMenuExtension<PracticeFlags>
+    class PracticeExtention : public MenuExt::MenuExtension, public ExclusiveMenuExtension::ExclusiveMenuExtension<UINT, PracticeMenuInfo>
     {
 
     public:
@@ -57,18 +35,14 @@ namespace Practice {
 
         explicit PracticeExtention(HWND hWnd, HINSTANCE hInstance) :
             MenuExtension{ hWnd ,hInstance},
-            BitFlagMenuExtension<PracticeFlags>{ PracticeFlags::mp3 }
+            ExclusiveMenuExtension{ PracticeMenuInfo{ IDM_EXT_PF1,  L"1",     1 } }
         {
 
-            IlitializeFlagMenu(
+            InitializeExclusiveMenu(
                 WindowMenu_,
                 name,
-                std::span<const PracticeMenuInfo>{PracticeItems},
                 this
             );
-
-            SetNoneRange(PracticeFlags::None);
-            SetAllRange(PracticeFlags::None);
 
             SetMenuBar(hWnd, WindowMenu_);
         }
