@@ -3,6 +3,8 @@
 #include"framework.h"
 #include"Resource.h"
 
+#include<cassert>
+
 //	アプリケーション拡張機能基底クラス
 class ApplicationExtensionBase
 {
@@ -14,7 +16,11 @@ public:
 	/// <param name="hWnd">メインアプリケーションウィンドウハンドル</param>
 	/// <param name="hInstance">ウィンドウインスタンス</param>
 	ApplicationExtensionBase(HWND hWnd, HINSTANCE hInstance) :
-		hWnd_{ hWnd }, hInstance_{ hInstance } {}
+		hWnd_{ hWnd }, hInstance_{ hInstance } {
+
+		assert(hWnd_ && "hWnd_ = nullptr");
+		assert(hInstance_ && "hWnd_ = nullptr");
+	}
 
 	/// <summary>
 	/// デストラクタ

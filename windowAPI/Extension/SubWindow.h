@@ -4,6 +4,7 @@
 #include"../Resource.h"
 
 #include<string>
+#include<functional>
 
 namespace SubWindow {
 
@@ -21,6 +22,10 @@ namespace SubWindow {
 		/// デストラクタ
 		/// </summary>
 		virtual ~SubWindow() = default;
+
+        HWND GetSubWindow() const noexcept {
+            return SubhWnd_;
+        }
 
 	protected:
 
@@ -119,5 +124,135 @@ namespace SubWindow {
             return true;
         }
 
+
+
 	};
+
+    class NormalSubwindow : public SubWindow
+    {
+    public:
+
+        explicit NormalSubwindow(HINSTANCE hInstace, std::wstring ClassName) :
+            SubWindow{ ClassName },
+            hInstance_{ hInstace } {
+            
+            //  ウィンドウクラス登録
+            const auto wc = CreateWindowClass();
+            RegisterClassExW(&wc);
+        }
+
+        /// <summary>
+        /// サブウィンドウプロシージャ関数
+        /// </summary>
+        /// <param name="hWnd">ウィンドウハンドル</param>
+        /// <param name="message">メッセージ</param>
+        /// <param name="wParam">パラメーター</param>
+        /// <param name="lParam">パラメーター</param>
+        /// <returns>メッセージの返値</returns>
+        LRESULT SubWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) override {
+            
+            switch (message)
+            {
+            case WM_CLOSE:
+                DestroyWindow(hWnd);
+                return 0;
+
+            case WM_DESTROY:
+                OnDestroySubWindow();
+                if (!OnDestroyFunc_.empty()) {
+                    for (auto& func : OnDestroyFunc_) {
+                        func(wParam, lParam);
+                    }
+                }
+                return 0;
+            default:
+                break;
+            }
+            if (!ProcFunc_.empty()) {
+                for (auto& func : ProcFunc_) {
+                    func(message, wParam, lParam);
+                }
+            }
+            if (!ExtensionVec_.empty()) {
+                for (auto& Ext : ExtensionVec_) {
+                    Ext->ExtensionProc(hWnd, message, wParam, lParam);
+                }
+            }
+
+            return DefWindowProcW(
+                hWnd, message, wParam, lParam
+            );
+        };
+
+       
+        bool CreateNormalSubWindow(unsigned int width, unsigned int height) {
+            return CreateSubWindow(hInstance_, width, height);
+        }
+
+        void OnDestroySubWindow() {
+
+            SubhWnd_ = nullptr;
+        }
+
+        void SetOnDestroyFunc(
+            std::function<void(WPARAM, LPARAM)> func
+        ) {
+            OnDestroyFunc_.push_back(func);
+        }
+        void AddProcFuncVec(
+            std::function<void(UINT, WPARAM, LPARAM)> func
+        ) {
+            ProcFunc_.push_back(func);
+        }
+
+        void AddExtensionVec(ApplicationExtensionBase* ext) {
+            if (!ext) {
+                return;
+            }
+            ExtensionVec_.push_back(ext);
+        }
+
+        void ClearOnDestroyFunc() {
+            OnDestroyFunc_.clear();
+        }
+        void ClearProcFuncVec() {
+            ProcFunc_.clear();
+        }
+        void ClearExtensionVec() {
+            ExtensionVec_.clear();
+        }
+        void ClearAll() {
+            ClearOnDestroyFunc();
+            ClearProcFuncVec();
+            ClearExtensionVec();
+        }
+
+    private:
+
+        HINSTANCE hInstance_{};
+
+        std::vector<std::function<void(WPARAM, LPARAM)>> OnDestroyFunc_{};
+
+        std::vector<std::function<void(UINT,WPARAM, LPARAM)>> ProcFunc_{};
+
+        std::vector<ApplicationExtensionBase*> ExtensionVec_{};
+
+        /// <summary>
+        /// ウィンドウクラス作成関数
+        /// </summary>
+        /// <returns>作成したウィンドウクラス</returns>
+        const WNDCLASSEXW CreateWindowClass() const noexcept {
+
+            WNDCLASSEXW wc{};
+            wc.cbSize = sizeof(wc);
+            wc.lpfnWndProc = WndProc;
+            wc.hInstance = hInstance_;
+            wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+            wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+            wc.lpszClassName = ClassName_.c_str();
+
+            return wc;
+        }
+
+    };
 }

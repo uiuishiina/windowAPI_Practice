@@ -10,6 +10,7 @@
 #include"ApplocationExtensionBase.h"
 #include"Extension/SelectFileExtension.h"
 #include"Extension/ExtentionPractice.h"
+#include"Extension/AudioCapture.h"
 
 #define MAX_LOADSTRING 100
 
@@ -205,6 +206,10 @@ private:
                 SelectFileExtension::FileExtensionFlags::png,
                 SelectFileExtension::FileExtensionFlags::jpg
             )
+        );
+
+        ExtensionArray.push_back(
+            std::make_unique<AudioCapture::AudioCapture>(hWnd, hInstance_)
         );
 
         return TRUE;

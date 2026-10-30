@@ -132,7 +132,11 @@ namespace BitFlagExtension {
 		/// <param name="end">判定終了位置</param>
 		/// <param name="start">判定開始位置</param>
 		/// <returns>すべて [ False ] なら [ True ]</returns>
-		bool RangeNone(T end, T start = T{}) const {
+		bool RangeNone(
+			T end, 
+			T start = T{}
+		) const {
+
 			for (
 				auto i = HandyItem::Enum::enum_to_index(start);
 				i < HandyItem::Enum::enum_to_index(end);
@@ -152,7 +156,11 @@ namespace BitFlagExtension {
 		/// <param name="end">判定終了位置</param>
 		/// <param name="start">判定開始位置</param>
 		/// <returns>すべて [ True ] なら [ True ]</returns>
-		bool RangeAll(T end, T start = T{}) const {
+		bool RangeAll(
+			T end, 
+			T start = T{}
+		) const {
+
 			for (
 				auto i = HandyItem::Enum::enum_to_index(start);
 				i < HandyItem::Enum::enum_to_index(end);
@@ -202,7 +210,8 @@ namespace BitFlagExtension {
 			std::span<const Menu> data,
 			Args... args
 		) :
-			BitFlagExtension<T>{}{
+			BitFlagExtension<T>{} {
+
 			SetMenuData(data);
 			((this->ToggleFlag(args)), ...);
 		}
@@ -213,6 +222,7 @@ namespace BitFlagExtension {
 			Args... args
 		) : 
 			BitFlagExtension<T>{} {
+
 			SetMenuData(data);
 			((this->ToggleFlag(args)), ...);
 		}
@@ -255,13 +265,17 @@ namespace BitFlagExtension {
 			);
 		}
 
-		
-
-		void SetNoneRange(T end, T start = T{}) {
+		void SetNoneRange(
+			T end, 
+			T start = T{}
+		) {
 			NoneRange_ = { end,start };
 		}
 
-		void SetAllRange(T end, T start = T{}) {
+		void SetAllRange(
+			T end, 
+			T start = T{}
+		) {
 			AllRange_ = { end,start };
 		}
 
@@ -278,7 +292,6 @@ namespace BitFlagExtension {
 		void SetMenuData(
 			std::initializer_list<Menu> data
 		) {
-
 			SetMenuData(std::span<const Menu>{data});
 		}
 

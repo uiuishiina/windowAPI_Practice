@@ -60,6 +60,15 @@
     <ClInclude Include="Extension\ExclusiveMenuExtension.h">
       <Filter>ヘッダー ファイル\Extension</Filter>
     </ClInclude>
+    <ClInclude Include="Extension\TimerBaseExtension.h">
+      <Filter>ヘッダー ファイル\Extension</Filter>
+    </ClInclude>
+    <ClInclude Include="Extension\CorrectedTimerExtension.h">
+      <Filter>ヘッダー ファイル\Extension</Filter>
+    </ClInclude>
+    <ClInclude Include="Extension\AudioCapture.h">
+      <Filter>ヘッダー ファイル\Extension</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="windowAPI.cpp">
